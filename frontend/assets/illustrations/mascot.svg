@@ -1,0 +1,36 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ursinho da enfermaria usando estetoscopio">
+  <defs>
+    <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#BFE3FD"/>
+      <stop offset="100%" stop-color="#8FD1FB"/>
+    </linearGradient>
+  </defs>
+  <circle cx="52" cy="46" r="22" fill="#8FD1FB"/>
+  <circle cx="148" cy="46" r="22" fill="#8FD1FB"/>
+  <circle cx="52" cy="46" r="11" fill="#EFF8FF"/>
+  <circle cx="148" cy="46" r="11" fill="#EFF8FF"/>
+  <circle cx="100" cy="92" r="58" fill="url(#bodyGrad)"/>
+  <ellipse cx="100" cy="106" rx="30" ry="22" fill="#EFF8FF"/>
+  <circle cx="100" cy="92" r="6" fill="#1F3A4D"/>
+  <path d="M100 96 L100 104" stroke="#1F3A4D" stroke-width="3" stroke-linecap="round"/>
+  <path d="M88 112 Q100 120 112 112" stroke="#1F3A4D" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="78" cy="80" r="6" fill="#1F3A4D"/>
+  <circle cx="122" cy="80" r="6" fill="#1F3A4D"/>
+  <circle cx="80" cy="78" r="1.6" fill="#FFFFFF"/>
+  <circle cx="124" cy="78" r="1.6" fill="#FFFFFF"/>
+  <g transform="translate(132,96) rotate(24)">
+    <rect x="0" y="0" width="34" height="14" rx="7" fill="#FFD9C7"/>
+    <circle cx="7" cy="7" r="1.4" fill="#E8A98C"/>
+    <circle cx="27" cy="7" r="1.4" fill="#E8A98C"/>
+    <rect x="13" y="2" width="8" height="10" rx="2" fill="#FFF3EC"/>
+  </g>
+  <rect x="58" y="140" width="84" height="56" rx="26" fill="#EFF8FF"/>
+  <g transform="translate(100,168)">
+    <rect x="-14" y="-4" width="28" height="8" rx="3" fill="#FF9E80"/>
+    <rect x="-4" y="-14" width="8" height="28" rx="3" fill="#FF9E80"/>
+  </g>
+  <path d="M62 118 C 50 140, 55 168, 80 172" stroke="#2FA1DE" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M138 118 C150 140, 145 168, 120 172" stroke="#2FA1DE" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <circle cx="80" cy="172" r="5" fill="#2FA1DE"/>
+  <circle cx="120" cy="172" r="5" fill="#2FA1DE"/>
+</svg>

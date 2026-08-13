@@ -1,0 +1,9 @@
+<svg viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Prancheta com coracao, sem registros ainda">
+  <ellipse cx="110" cy="182" rx="70" ry="10" fill="#DCEFFE"/>
+  <rect x="52" y="30" width="116" height="140" rx="18" fill="#FFFFFF" stroke="#BFE3FD" stroke-width="4"/>
+  <rect x="86" y="16" width="48" height="24" rx="10" fill="#57BCF3"/>
+  <rect x="72" y="56" width="76" height="10" rx="5" fill="#DCEFFE"/>
+  <rect x="72" y="78" width="56" height="10" rx="5" fill="#DCEFFE"/>
+  <rect x="72" y="100" width="66" height="10" rx="5" fill="#DCEFFE"/>
+  <path d="M110 118 C 96 104, 74 118, 84 138 C 90 148, 110 160, 110 160 C 110 160, 130 148, 136 138 C 146 118, 124 104, 110 118 Z" fill="#FF9E80"/>
+</svg>

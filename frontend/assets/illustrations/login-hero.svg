@@ -1,0 +1,62 @@
+<svg viewBox="0 0 420 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cena da enfermaria escolar com ursinho, coracao e maleta de primeiros socorros">
+  <ellipse cx="210" cy="330" rx="170" ry="18" fill="#DCEFFE"/>
+
+  <!-- cloud shapes -->
+  <g fill="#F3FAFF">
+    <circle cx="70" cy="70" r="26"/>
+    <circle cx="96" cy="60" r="20"/>
+    <circle cx="46" cy="60" r="16"/>
+  </g>
+  <g fill="#F3FAFF">
+    <circle cx="360" cy="50" r="22"/>
+    <circle cx="382" cy="42" r="16"/>
+    <circle cx="338" cy="44" r="14"/>
+  </g>
+
+  <!-- first aid kit -->
+  <g transform="translate(268,206)">
+    <rect x="0" y="18" width="96" height="70" rx="14" fill="#57BCF3"/>
+    <rect x="0" y="18" width="96" height="70" rx="14" fill="none" stroke="#2FA1DE" stroke-width="3"/>
+    <rect x="30" y="0" width="36" height="22" rx="8" fill="#2FA1DE"/>
+    <rect x="34" y="46" width="28" height="10" rx="3" fill="#FFFFFF"/>
+    <rect x="43" y="37" width="10" height="28" rx="3" fill="#FFFFFF"/>
+    <rect x="-6" y="50" width="12" height="20" rx="4" fill="#1C84C0"/>
+    <rect x="90" y="50" width="12" height="20" rx="4" fill="#1C84C0"/>
+  </g>
+
+  <!-- heart with pulse -->
+  <g transform="translate(40,190)">
+    <path d="M45 26 C 20 5, -10 25, 8 52 C 20 70, 45 86, 45 86 C 45 86, 70 70, 82 52 C 100 25, 70 5, 45 26 Z" fill="#FF9E80"/>
+    <path d="M6 50 L 26 50 L 34 34 L 46 66 L 56 50 L 90 50" stroke="#FFFFFF" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- ground -->
+  <ellipse cx="200" cy="322" rx="150" ry="14" fill="#EAF6FF"/>
+
+  <!-- bear body -->
+  <g transform="translate(120,120)">
+    <circle cx="30" cy="10" r="18" fill="#8FD1FB"/>
+    <circle cx="130" cy="10" r="18" fill="#8FD1FB"/>
+    <circle cx="30" cy="10" r="9" fill="#EFF8FF"/>
+    <circle cx="130" cy="10" r="9" fill="#EFF8FF"/>
+    <circle cx="80" cy="55" r="48" fill="#BFE3FD"/>
+    <ellipse cx="80" cy="66" rx="26" ry="19" fill="#EFF8FF"/>
+    <circle cx="80" cy="52" r="5" fill="#1F3A4D"/>
+    <path d="M80 55 L80 62" stroke="#1F3A4D" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M70 70 Q80 76 90 70" stroke="#1F3A4D" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <circle cx="62" cy="42" r="5" fill="#1F3A4D"/>
+    <circle cx="98" cy="42" r="5" fill="#1F3A4D"/>
+    <rect x="46" y="96" width="68" height="70" rx="24" fill="#EFF8FF"/>
+    <g transform="translate(80,120)">
+      <rect x="-11" y="-3" width="22" height="6" rx="2.5" fill="#FF9E80"/>
+      <rect x="-3" y="-11" width="6" height="22" rx="2.5" fill="#FF9E80"/>
+    </g>
+    <path d="M50 78 C 40 96, 44 118, 64 122" stroke="#2FA1DE" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M110 78 C 120 96, 116 118, 96 122" stroke="#2FA1DE" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <circle cx="64" cy="122" r="4" fill="#2FA1DE"/>
+    <circle cx="96" cy="122" r="4" fill="#2FA1DE"/>
+    <!-- waving arm -->
+    <ellipse cx="16" cy="112" rx="12" ry="20" fill="#BFE3FD" transform="rotate(-30 16 112)"/>
+    <ellipse cx="144" cy="130" rx="12" ry="22" fill="#BFE3FD"/>
+  </g>
+</svg>
