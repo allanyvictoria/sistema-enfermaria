@@ -256,6 +256,7 @@ async function renderAlunos() {
           e.preventDefault();
           const btn = overlay.querySelector("#salvar-aluno");
           btn.disabled = true;
+          
           const dados = {
             nome: overlay.querySelector("#a-nome").value.trim(),
             data_nascimento: overlay.querySelector("#a-nasc").value,
@@ -264,24 +265,40 @@ async function renderAlunos() {
             foto_url: overlay.querySelector("#a-foto").value.trim() || null,
             observacoes: overlay.querySelector("#a-obs").value.trim() || null
           };
+
+          const turmaSel = overlay.querySelector('#a-turma').value;
+
           try {
             if (editando) {
+              // 1. Atualiza os dados cadastrais do aluno
               await Api.alunos.atualizar(aluno.id, dados);
-              showToast("Dados do aluno atualizados.", "success");
-              const turmaSel = overlay.querySelector('#a-turma').value;
-              if (turmaSel && (!aluno.turma || !aluno.turma.id)) {
-                const hoje = new Date().toISOString().slice(0,10);
-                await Api.matriculas.criar({ aluno_id: aluno.id, turma_id: Number(turmaSel), data_inicio: hoje });
-              }
-            } else {
-              const criado = await Api.alunos.criar(dados);
-              showToast("Aluno cadastrado com sucesso.", "success");
-              const turmaSel = overlay.querySelector('#a-turma').value;
+              
+              // 2. Gerencia a turma / matrícula
+              // (Se o seu backend tiver uma rota específica para atualizar matrícula ou se você gerenciar isso, 
+              // certifique-se de que a turma está sendo enviada ou tratada aqui)
               if (turmaSel) {
-                const hoje = new Date().toISOString().slice(0,10);
+                const turmaIdNum = Number(turmaSel);
+                // Verifica se a turma mudou em relação à que ele já tinha
+                if (!aluno.turma || aluno.turma.id !== turmaIdNum) {
+                  const hoje = new Date().toISOString().slice(0, 10);
+                  // Se o seu backend tiver endpoint de atualizar matrícula, use-o, ou crie a nova matrícula ativa:
+                  await Api.matriculas.criar({ aluno_id: aluno.id, turma_id: turmaIdNum, data_inicio: hoje });
+                }
+              }
+
+              showToast("Dados do aluno atualizados.", "success");
+            } else {
+              // Criando novo aluno
+              const criado = await Api.alunos.criar(dados);
+              
+              if (turmaSel) {
+                const hoje = new Date().toISOString().slice(0, 10);
                 await Api.matriculas.criar({ aluno_id: criado.id, turma_id: Number(turmaSel), data_inicio: hoje });
               }
+
+              showToast("Aluno cadastrado com sucesso.", "success");
             }
+
             fecharModal();
             renderAlunos();
           } catch (err) {
