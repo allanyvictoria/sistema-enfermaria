@@ -15,6 +15,7 @@ class OcorrenciaCreate(BaseModel):
 
     responsavel_buscou_id: int | None = None
     observacoes: str | None = None
+    observacao_posterior: str | None = None
 
 
 class AlunoResumo(BaseModel):
@@ -67,6 +68,7 @@ class OcorrenciaResponse(BaseModel):
 
     responsavel_buscou_id: int | None
     observacoes: str | None
+    observacao_posterior: str | None
     modificado_em: datetime | None
 
     class Config:

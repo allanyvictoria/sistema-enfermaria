@@ -153,3 +153,35 @@ def buscar_ocorrencia(
         )
 
     return ocorrencia
+
+
+@router.put(
+    "/{ocorrencia_id}",
+    response_model=OcorrenciaResponse,
+    dependencies=[Depends(admin_ou_enfermagem)]
+)
+def atualizar_ocorrencia(
+    ocorrencia_id: int,
+    dados: OcorrenciaCreate, # ou um schema específico com campos opcionais
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
+):
+    ocorrencia = (
+        db.query(Ocorrencia)
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
+        .filter(Ocorrencia.id == ocorrencia_id, Aluno.escola_id == escola_id)
+        .first()
+    )
+
+    if not ocorrencia:
+        raise HTTPException(status_code=404, detail="Ocorrência não encontrada")
+
+    # Atualiza apenas os campos enviados ou a observação posterior
+    dados_dict = dados.model_dump(exclude_unset=True)
+    for key, value in dados_dict.items():
+        setattr(ocorrencia, key, value)
+
+    db.commit()
+    db.refresh(ocorrencia)
+
+    return buscar_ocorrencia(ocorrencia.id, db, escola_id)
