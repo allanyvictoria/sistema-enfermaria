@@ -258,11 +258,11 @@ async function abrirFormOcorrencia(alunosPrecarregados, aoSalvar) {
 
         if (aluno && (aluno.alergias || aluno.condicoes_saude)) {
           boxAlerta.innerHTML = `
-            <div style="background:#fee2e2; border-left:4px solid #efbf44; padding:10px 14px; border-radius:8px; margin-top:4px;">
-              <strong style="color:#991b1b; display:block; font-size:12px; font-weight:700;">🚨 ALERTA SOBRE CRIANÇA:</strong>
-              ${aluno.alergias ? `<p style="margin:2px 0 0; color:#7f1d1d; font-size:13px;"><strong>Alergias:</strong> ${escapeHtml(aluno.alergias)}</p>` : ""}
-              ${aluno.condicoes_saude ? `<p style="margin:2px 0 0; color:#7f1d1d; font-size:13px;"><strong>Condições:</strong> ${escapeHtml(aluno.condicoes_saude)}</p>` : ""}
-            </div>
+          <div style="background:#fef9c3; border-left:4px solid #eab308; padding:10px 14px; border-radius:8px; margin-top:4px;">
+            <strong style="color:#854d0e; display:block; font-size:12px; font-weight:700;">🚨 ALERTA SOBRE CRIANÇA:</strong>
+            ${aluno.alergias ? `<p style="margin:2px 0 0; color:#713f12; font-size:13px;"><strong>Alergias:</strong> ${escapeHtml(aluno.alergias)}</p>` : ""}
+            ${aluno.condicoes_saude ? `<p style="margin:2px 0 0; color:#713f12; font-size:13px;"><strong>Condições:</strong> ${escapeHtml(aluno.condicoes_saude)}</p>` : ""}
+          </div>
           `;
         } else {
           boxAlerta.innerHTML = "";
