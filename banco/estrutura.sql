@@ -1,15 +1,20 @@
+-- =========================================================
 -- Sistema de Gestão da Enfermaria Escolar
 -- Script de criação do banco de dados (PostgreSQL)
+-- Atualizado conforme os models SQLAlchemy reais em backend/app/models
+-- =========================================================
 
 CREATE TABLE usuario (
     id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nome            VARCHAR(150) NOT NULL,
     login           VARCHAR(100) NOT NULL UNIQUE,
     senha_hash      VARCHAR(255) NOT NULL,
-    tipo_acesso     VARCHAR(20) NOT NULL CHECK (tipo_acesso IN ('ADMIN', 'ENFERMAGEM', 'PROFESSORA')),
+    tipo_acesso     VARCHAR(20) NOT NULL DEFAULT 'ADMIN' CHECK (tipo_acesso IN ('ADMIN', 'ENFERMAGEM', 'PROFESSORA')),
     ativo           BOOLEAN NOT NULL DEFAULT TRUE,
     criado_em       TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_usuario_login ON usuario(login);
 
 
 CREATE TABLE sala (
@@ -33,21 +38,22 @@ CREATE TABLE turma (
     id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nome            VARCHAR(100) NOT NULL,
     sala_id         BIGINT NOT NULL REFERENCES sala(id),
-    turno           VARCHAR(10) NOT NULL CHECK (turno IN ('MANHA', 'TARDE', 'NOITE', 'INTEGRAL')),
+    turno           VARCHAR(10) NOT NULL CHECK (turno IN ('MANHA', 'TARDE', 'INTEGRAL')),
     ano_letivo      SMALLINT NOT NULL CHECK (ano_letivo >= 2000),
     ativa           BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE INDEX idx_turma_sala ON turma(sala_id);
 
-
 -- Tabela de ligação N:N (uma turma pode ter mais de uma professora)
+-- OBS: no código atual essa tabela é criada 2x (app/models/turma.py e
+-- app/models/turma_professora.py) com definições quase idênticas — mantenha
+-- só uma dessas duas fontes no projeto para evitar conflito de metadata.
 CREATE TABLE turma_professora (
     id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    turma_id        BIGINT NOT NULL REFERENCES turma(id),
-    professora_id   BIGINT NOT NULL REFERENCES professora(id),
-    papel           VARCHAR(20) CHECK (papel IN ('TITULAR', 'AUXILIAR')),
-    UNIQUE (turma_id, professora_id)
+    turma_id        BIGINT REFERENCES turma(id) ON DELETE CASCADE,
+    professora_id   BIGINT REFERENCES professora(id) ON DELETE CASCADE,
+    papel           VARCHAR(20)
 );
 
 CREATE INDEX idx_turma_professora_turma ON turma_professora(turma_id);
@@ -57,19 +63,24 @@ CREATE INDEX idx_turma_professora_professora ON turma_professora(professora_id);
 CREATE TABLE profissional_enfermagem (
     id                   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nome                VARCHAR(150) NOT NULL,
-    funcao              VARCHAR(20) NOT NULL CHECK (funcao IN ('ENFERMEIRO(A)', 'TECNICO(A)', 'AUXILIAR')),
+    funcao              VARCHAR(20) NOT NULL,
     registro_coren      VARCHAR(30),
     telefone            VARCHAR(20),
     ativa               BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 
+-- ALTERADO: alergias e condições de saúde não são mais tabelas estruturadas
+-- (alergia / condicao_saude / aluno_alergia / aluno_condicao foram removidas
+-- do código). Agora são campos de texto livre direto em aluno.
 CREATE TABLE aluno (
     id                   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nome                VARCHAR(150) NOT NULL,
     data_nascimento     DATE NOT NULL,
     foto_url            VARCHAR(255),
     observacoes         TEXT,
+    alergias            TEXT,
+    condicoes_saude     TEXT,
     ativo               BOOLEAN NOT NULL DEFAULT TRUE,
     criado_em           TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -80,14 +91,14 @@ CREATE TABLE matricula (
     aluno_id        BIGINT NOT NULL REFERENCES aluno(id),
     turma_id        BIGINT NOT NULL REFERENCES turma(id),
     data_inicio     DATE NOT NULL,
-    data_fim        DATE,
-    UNIQUE (aluno_id, turma_id, data_inicio)
+    data_fim        DATE
 );
 
 CREATE INDEX idx_matricula_aluno ON matricula(aluno_id);
 CREATE INDEX idx_matricula_turma ON matricula(turma_id);
-
--- Garante no máximo uma matrícula "ativa" (data_fim NULL) por aluno
+-- Mantidas por segurança de integridade (não estão nos models SQLAlchemy,
+-- que não declaram __table_args__, mas evitam dados inconsistentes):
+CREATE UNIQUE INDEX idx_matricula_unica ON matricula(aluno_id, turma_id, data_inicio);
 CREATE UNIQUE INDEX idx_matricula_ativa_unica
     ON matricula(aluno_id)
     WHERE data_fim IS NULL;
@@ -103,53 +114,16 @@ CREATE TABLE responsavel (
     autorizado_buscar       BOOLEAN NOT NULL DEFAULT TRUE
 );
 
-
--- Tabela de ligação N:N - um responsável pode ter vários alunos, e vice-versa
+-- ALTERADO: agora é chave primária composta (sem coluna id própria),
+-- conforme app/models/aluno.py
 CREATE TABLE aluno_responsavel (
-    id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    aluno_id        BIGINT NOT NULL REFERENCES aluno(id),
-    responsavel_id  BIGINT NOT NULL REFERENCES responsavel(id),
-    UNIQUE (aluno_id, responsavel_id)
+    aluno_id        BIGINT NOT NULL REFERENCES aluno(id) ON DELETE CASCADE,
+    responsavel_id  BIGINT NOT NULL REFERENCES responsavel(id) ON DELETE CASCADE,
+    PRIMARY KEY (aluno_id, responsavel_id)
 );
 
 CREATE INDEX idx_aluno_responsavel_aluno ON aluno_responsavel(aluno_id);
 CREATE INDEX idx_aluno_responsavel_responsavel ON aluno_responsavel(responsavel_id);
-
-
-CREATE TABLE alergia (
-    id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    nome        VARCHAR(100) NOT NULL UNIQUE,
-    categoria   VARCHAR(20) CHECK (categoria IN ('MEDICAMENTO', 'ALIMENTO', 'OUTRO'))
-);
-
-
-CREATE TABLE condicao_saude (
-    id       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    nome    VARCHAR(100) NOT NULL UNIQUE
-);
-
-
-CREATE TABLE aluno_alergia (
-    id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    aluno_id        BIGINT NOT NULL REFERENCES aluno(id),
-    alergia_id      BIGINT NOT NULL REFERENCES alergia(id),
-    gravidade       VARCHAR(10) CHECK (gravidade IN ('LEVE', 'MODERADA', 'GRAVE')),
-    observacao      VARCHAR(255),
-    UNIQUE (aluno_id, alergia_id)
-);
-
-
-CREATE TABLE aluno_condicao (
-    id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    aluno_id        BIGINT NOT NULL REFERENCES aluno(id),
-    condicao_id     BIGINT NOT NULL REFERENCES condicao_saude(id),
-    gravidade       VARCHAR(10) CHECK (gravidade IN ('LEVE', 'MODERADA', 'GRAVE')),
-    observacao      VARCHAR(255),
-    UNIQUE (aluno_id, condicao_id)
-);
-
-CREATE INDEX idx_aluno_alergia_aluno ON aluno_alergia(aluno_id);
-CREATE INDEX idx_aluno_condicao_aluno ON aluno_condicao(aluno_id);
 
 
 CREATE TABLE tipo_ocorrencia (
@@ -190,6 +164,9 @@ CREATE INDEX idx_ocorrencia_profissional ON ocorrencia(profissional_id);
 
 
 -- Trigger: atualiza modificado_em automaticamente em UPDATE
+-- OBS: o SQLAlchemy não gerencia isso sozinho (modificado_em é apenas
+-- nullable no model), então o trigger no banco continua sendo a forma
+-- mais confiável de manter esse campo correto.
 CREATE OR REPLACE FUNCTION atualizar_modificado_em()
 RETURNS TRIGGER AS $$
 BEGIN
