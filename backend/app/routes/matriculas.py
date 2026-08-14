@@ -51,16 +51,18 @@ def criar_matricula(
     if not turma:
         raise HTTPException(status_code=404, detail="Turma não encontrada")
 
-    # Verifica se existe matrícula ativa para o aluno
+    # 📌 Se já existe matrícula ativa, encerra ela automaticamente (atribui a data de hoje como fim)
     ativa = db.query(Matricula).filter(Matricula.aluno_id == dados.aluno_id, Matricula.data_fim == None).first()
 
     if ativa:
-        raise HTTPException(status_code=400, detail="Já existe matrícula ativa para este aluno. Finalize-a antes.")
+        ativa.data_fim = dados.data_inicio or date.today()
+        db.commit()
 
+    # Cria a nova matrícula na turma nova
     matricula = Matricula(
         aluno_id=dados.aluno_id,
         turma_id=dados.turma_id,
-        data_inicio=dados.data_inicio,
+        data_inicio=dados.data_inicio or date.today(),
         data_fim=dados.data_fim
     )
 
