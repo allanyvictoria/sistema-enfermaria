@@ -107,5 +107,14 @@ function renderAppShell({ titulo, subtitulo = "", acoesHtml = "" }) {
     btnMenu.addEventListener("click", () => sidebar.classList.toggle("open"));
   }
 
+  // Fecha o menu lateral automaticamente ao clicar em qualquer link no celular
+  document.querySelectorAll(".sidebar .nav-item").forEach(link => {
+    link.addEventListener("click", () => {
+      if (sidebar.classList.contains("open")) {
+        sidebar.classList.remove("open");
+      }
+    });
+  });
+
   return document.getElementById("page-content");
 }
