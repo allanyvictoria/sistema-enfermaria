@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from app.models.ocorrencia import Ocorrencia
     from app.models.matricula import Matricula
 
-
 # Tabela intermediária de ligação (Aluno <-> Responsável)
 aluno_responsavel = Table(
     'aluno_responsavel',
@@ -28,6 +27,13 @@ class Aluno(Base):
         BigInteger,
         primary_key=True,
         autoincrement=True
+    )
+
+    # 👈 ADICIONADO
+    escola_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("escola.id"),
+        nullable=False
     )
 
     nome: Mapped[str] = mapped_column(
@@ -50,6 +56,7 @@ class Aluno(Base):
         nullable=True
     )
 
+    # 📌 Colunas de Texto Simples (para o cadastro direto do formulário)
     alergias: Mapped[Optional[str]] = mapped_column(
         Text,
         nullable=True
@@ -72,6 +79,7 @@ class Aluno(Base):
         default=datetime.now
     )
 
+    # 📌 Relacionamentos
     ocorrencias: Mapped[List[Ocorrencia]] = relationship(
         "Ocorrencia",
         back_populates="aluno"
@@ -88,10 +96,10 @@ class Aluno(Base):
         back_populates="aluno"
     )
 
-
+    # 📌 Propriedades calculadas
     @property
     def turma_id(self) -> int | None:
-        # Retorna a turma da matrícula ativa se existir
+        # Retorna a turma da matrícula ativa (data_fim is None) se existir
         for m in self.matriculas:
             if m.data_fim is None:
                 return m.turma_id

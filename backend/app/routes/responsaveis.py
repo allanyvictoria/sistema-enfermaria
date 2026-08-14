@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import SessionLocal
-from app.dependencies.auth import admin_ou_enfermagem, qualquer_usuario
+from app.dependencies.auth import admin_ou_enfermagem, qualquer_usuario, get_escola_id_atual
 from app.models.aluno import Aluno
 from app.models.responsavel import Responsavel
 from app.schemas.responsavel import (
@@ -31,11 +31,15 @@ def get_db():
     response_model=list[ResponsavelDetailResponse],
     dependencies=[Depends(qualquer_usuario)],
 )
-def listar_responsaveis(db: Session = Depends(get_db)):
+def listar_responsaveis(
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
+):
     # joinedload traz os alunos vinculados junto, evitando N+1 queries
     return (
         db.query(Responsavel)
         .options(joinedload(Responsavel.alunos))
+        .filter(Responsavel.escola_id == escola_id)
         .all()
     )
 
@@ -45,11 +49,15 @@ def listar_responsaveis(db: Session = Depends(get_db)):
     response_model=ResponsavelDetailResponse,
     dependencies=[Depends(qualquer_usuario)],
 )
-def buscar_responsavel(responsavel_id: int, db: Session = Depends(get_db)):
+def buscar_responsavel(
+    responsavel_id: int,
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
+):
     responsavel = (
         db.query(Responsavel)
         .options(joinedload(Responsavel.alunos))
-        .filter(Responsavel.id == responsavel_id)
+        .filter(Responsavel.id == responsavel_id, Responsavel.escola_id == escola_id)
         .first()
     )
 
@@ -62,9 +70,10 @@ def buscar_responsavel(responsavel_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=ResponsavelResponse, status_code=201)
 def criar_responsavel(
     dados: ResponsavelCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    responsavel = Responsavel(**dados.model_dump())
+    responsavel = Responsavel(**dados.model_dump(), escola_id=escola_id)
 
     db.add(responsavel)
     db.commit()
@@ -74,24 +83,29 @@ def criar_responsavel(
 
 
 # ==========================================
-# Vínculo Responsável <-> Aluno 
+# Vínculo Responsável <-> Aluno (N:N)
 # ==========================================
 @router.post(
     "/{responsavel_id}/vincular/{aluno_id}",
     response_model=ResponsavelDetailResponse,
     dependencies=[Depends(admin_ou_enfermagem)],
 )
-def vincular_aluno(responsavel_id: int, aluno_id: int, db: Session = Depends(get_db)):
+def vincular_aluno(
+    responsavel_id: int,
+    aluno_id: int,
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
+):
     responsavel = (
         db.query(Responsavel)
         .options(joinedload(Responsavel.alunos))
-        .filter(Responsavel.id == responsavel_id)
+        .filter(Responsavel.id == responsavel_id, Responsavel.escola_id == escola_id)
         .first()
     )
     if not responsavel:
         raise HTTPException(status_code=404, detail="Responsável não encontrado")
 
-    aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
+    aluno = db.query(Aluno).filter(Aluno.id == aluno_id, Aluno.escola_id == escola_id).first()
     if not aluno:
         raise HTTPException(status_code=404, detail="Aluno não encontrado")
 
@@ -108,17 +122,22 @@ def vincular_aluno(responsavel_id: int, aluno_id: int, db: Session = Depends(get
     response_model=ResponsavelDetailResponse,
     dependencies=[Depends(admin_ou_enfermagem)],
 )
-def desvincular_aluno(responsavel_id: int, aluno_id: int, db: Session = Depends(get_db)):
+def desvincular_aluno(
+    responsavel_id: int,
+    aluno_id: int,
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
+):
     responsavel = (
         db.query(Responsavel)
         .options(joinedload(Responsavel.alunos))
-        .filter(Responsavel.id == responsavel_id)
+        .filter(Responsavel.id == responsavel_id, Responsavel.escola_id == escola_id)
         .first()
     )
     if not responsavel:
         raise HTTPException(status_code=404, detail="Responsável não encontrado")
 
-    aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
+    aluno = db.query(Aluno).filter(Aluno.id == aluno_id, Aluno.escola_id == escola_id).first()
     if not aluno:
         raise HTTPException(status_code=404, detail="Aluno não encontrado")
 
@@ -128,4 +147,3 @@ def desvincular_aluno(responsavel_id: int, aluno_id: int, db: Session = Depends(
         db.refresh(responsavel)
 
     return responsavel
-

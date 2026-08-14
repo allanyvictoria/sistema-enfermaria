@@ -35,12 +35,12 @@ async function carregarListaUsuarios() {
   try {
     lista = await Api.usuarios.listar();
   } catch (err) {
-    if (wrap && !document.body.contains(wrap)) return; // 👈 ADICIONADO
+    if (wrap && !document.body.contains(wrap)) return;
     wrap.innerHTML = emptyStateHtml("Não foi possível carregar", err.message);
     return;
   }
 
-  if (wrap && !document.body.contains(wrap)) return; // 👈 ADICIONADO
+  if (wrap && !document.body.contains(wrap)) return;
 
   if (!lista.length) {
     wrap.innerHTML = emptyStateHtml(

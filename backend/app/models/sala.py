@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Boolean, String
+from sqlalchemy import BigInteger, Boolean, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -10,6 +10,13 @@ class Sala(Base):
     id: Mapped[int] = mapped_column(
         BigInteger,
         primary_key=True
+    )
+
+    # 👈 ADICIONADO
+    escola_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("escola.id"),
+        nullable=False
     )
 
     nome: Mapped[str] = mapped_column(

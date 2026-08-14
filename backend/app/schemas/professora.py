@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from app.schemas.turma import TurmaResponse  
+from app.schemas.turma import TurmaResponse
 
 
 class ProfessoraCreate(BaseModel):
@@ -11,7 +11,8 @@ class ProfessoraCreate(BaseModel):
 class ProfessoraResponse(ProfessoraCreate):
     id: int
     ativa: bool
-    turmas: list[TurmaResponse] = []  
+    escola_id: int  # 👈 ADICIONADO
+    turmas: list[TurmaResponse] = []
 
     class Config:
         from_attributes = True

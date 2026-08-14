@@ -9,6 +9,7 @@ class SalaCreate(BaseModel):
 class SalaResponse(SalaCreate):
     id: int
     ativa: bool
+    escola_id: int  # 👈 ADICIONADO
 
     class Config:
         from_attributes = True

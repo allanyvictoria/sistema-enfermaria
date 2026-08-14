@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
+from app.dependencies.auth import get_escola_id_atual
 from app.models.profissional_enfermagem import ProfissionalEnfermagem
 from app.schemas.profissional_enfermagem import (
     ProfissionalEnfermagemCreate,
@@ -24,8 +25,15 @@ def get_db():
 
 
 @router.get("/", response_model=list[ProfissionalEnfermagemResponse])
-def listar_profissionais(db: Session = Depends(get_db)):
-    return db.query(ProfissionalEnfermagem).all()
+def listar_profissionais(
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
+):
+    return (
+        db.query(ProfissionalEnfermagem)
+        .filter(ProfissionalEnfermagem.escola_id == escola_id)
+        .all()
+    )
 
 
 @router.post(
@@ -35,9 +43,10 @@ def listar_profissionais(db: Session = Depends(get_db)):
 )
 def criar_profissional(
     dados: ProfissionalEnfermagemCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    profissional = ProfissionalEnfermagem(**dados.model_dump())
+    profissional = ProfissionalEnfermagem(**dados.model_dump(), escola_id=escola_id)
 
     db.add(profissional)
     db.commit()

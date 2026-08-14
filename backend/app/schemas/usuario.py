@@ -6,6 +6,8 @@ class UsuarioCreate(BaseModel):
     login: str
     tipo_acesso: str  # ADMIN, ENFERMAGEM ou PROFESSORA
     senha: str = Field(min_length=4)
+    # escola_id NÃO entra aqui — é preenchido pelo backend a partir
+    # do token de quem está logado (Etapa 4), nunca vindo do frontend.
 
 
 class UsuarioUpdate(BaseModel):
@@ -21,6 +23,7 @@ class UsuarioResponse(BaseModel):
     login: str
     tipo_acesso: str
     ativo: bool
+    escola_id: int  # 👈 ADICIONADO
 
     class Config:
         from_attributes = True

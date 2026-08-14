@@ -4,11 +4,12 @@ from typing import List, Optional
 from app.schemas.turma import TurmaResponse
 
 
+# 📌 Colocamos o ResponsavelResumoSchema no topo para poder ser usado no AlunoResponse
 class ResponsavelResumoSchema(BaseModel):
     id: int
     nome: str
     parentesco: str
-    telefone_principal: str 
+    telefone_principal: str  # 👈 Corrigido: era 'telefone', mas no banco é 'telefone_principal'
     autorizado_buscar: bool = True
 
     class Config:
@@ -21,8 +22,10 @@ class AlunoCreate(BaseModel):
     data_nascimento: date
     foto_url: str | None = None
     observacoes: str | None = None
-    alergias: str | None = None           
+    alergias: str | None = None
     condicoes_saude: str | None = None
+    # escola_id NÃO entra aqui — preenchido pelo backend a partir do
+    # token de quem está logado (Etapa 4).
 
 
 # Dados que a API responde para o Front-End
@@ -32,15 +35,16 @@ class AlunoResponse(BaseModel):
     data_nascimento: date
     foto_url: str | None = None
     observacoes: str | None = None
-    alergias: str | None = None          
+    alergias: str | None = None
     condicoes_saude: str | None = None
     ativo: bool
     criado_em: datetime
-    responsaveis: list[ResponsavelResumoSchema] = []  
+    escola_id: int  # 👈 ADICIONADO
+    responsaveis: list[ResponsavelResumoSchema] = []
     turma: Optional[TurmaResponse] = None
 
     class Config:
-        from_attributes = True  # Permite converter o modelo do SQLAlchemy em Pydantic
+        from_attributes = True
 
 
 class OcorrenciaResumoSchema(BaseModel):

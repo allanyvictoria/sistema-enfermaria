@@ -47,6 +47,13 @@ def get_usuario_atual(
             detail="Token sem usuário válido.",
         )
 
+    escola_id_token = payload.get("escola_id")
+    if escola_id_token is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token sem escola válida. Faça login novamente.",
+        )
+
     usuario = db.get(Usuario, int(usuario_id))
     if usuario is None or not usuario.ativo:
         raise HTTPException(
@@ -54,7 +61,27 @@ def get_usuario_atual(
             detail="Usuário inválido ou inativo.",
         )
 
+    # Checagem cruzada: se a escola do usuário no banco mudou desde que o
+    # token foi emitido (ex: usuário foi movido de escola), o token velho
+    # não pode continuar valendo pra escola antiga.
+    if usuario.escola_id != int(escola_id_token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido para esta escola. Faça login novamente.",
+        )
+
     return usuario
+
+
+def get_escola_id_atual(
+    usuario: Usuario = Depends(get_usuario_atual),
+) -> int:
+    """
+    Dependency pronta pra Etapa 4: qualquer rota que precise filtrar
+    dados por escola pode usar `escola_id: int = Depends(get_escola_id_atual)`
+    em vez de extrair isso na mão em cada endpoint.
+    """
+    return usuario.escola_id
 
 
 def requer_perfil(*perfis: str) -> Callable[[Usuario], Usuario]:

@@ -58,7 +58,7 @@ async function renderOcorrencias() {
     alunos = await Api.alunos.listar();
   } catch {}
 
-  if (!document.body.contains(content)) return; // 👈 ADICIONADO
+  if (!document.body.contains(content)) return;
 
   const selAluno = document.getElementById("f-aluno");
   alunos.forEach(a => {

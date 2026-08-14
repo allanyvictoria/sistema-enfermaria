@@ -22,12 +22,12 @@ async function renderDashboard() {
   try {
     dados = await Api.dashboard.resumo();
   } catch (err) {
-    if (!document.body.contains(content)) return; // 👈 ADICIONADO
+    if (!document.body.contains(content)) return;
     content.innerHTML = emptyStateHtml("Não foi possível carregar o painel", err.message);
     return;
   }
 
-  if (!document.body.contains(content)) return; // 👈 ADICIONADO
+  if (!document.body.contains(content)) return;
 
   const ind = dados.indicadores || {};
   const g = dados.graficos || {};

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, List
-from sqlalchemy import BigInteger, Boolean, String
+from sqlalchemy import BigInteger, Boolean, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -14,6 +14,10 @@ class Professora(Base):
     __tablename__ = "professora"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+
+    # 👈 ADICIONADO
+    escola_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("escola.id"), nullable=False)
+
     nome: Mapped[str] = mapped_column(String(150), nullable=False)
     telefone: Mapped[str | None] = mapped_column(String(20))
     email: Mapped[str | None] = mapped_column(String(150))

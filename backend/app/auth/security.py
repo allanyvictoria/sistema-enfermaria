@@ -46,7 +46,8 @@ def gerar_hash_senha(
 
 def criar_token(
     usuario_id: int,
-    tipo_acesso: str
+    tipo_acesso: str,
+    escola_id: int
 ) -> str:
 
     expiracao = datetime.now(timezone.utc) + timedelta(
@@ -56,6 +57,7 @@ def criar_token(
     payload = {
         "sub": str(usuario_id),
         "tipo_acesso": tipo_acesso,
+        "escola_id": escola_id,
         "exp": expiracao
     }
 

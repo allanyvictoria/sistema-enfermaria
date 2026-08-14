@@ -44,6 +44,7 @@ def login(
         db.query(Usuario)
         .filter(
             Usuario.login == dados.login,
+            Usuario.escola_id == dados.escola_id,
             Usuario.ativo == True
         )
         .first()
@@ -66,14 +67,16 @@ def login(
 
     token = criar_token(
         usuario.id,
-        usuario.tipo_acesso
+        usuario.tipo_acesso,
+        usuario.escola_id
     )
 
     return {
         "access_token": token,
         "token_type": "bearer",
         "usuario_id": usuario.id,
-        "tipo_acesso": usuario.tipo_acesso
+        "tipo_acesso": usuario.tipo_acesso,
+        "escola_id": usuario.escola_id
     }
 
 @router.get("/me")
@@ -82,5 +85,6 @@ def obter_usuario_logado(usuario: Usuario = Depends(get_usuario_atual)):
         "id": usuario.id,
         "nome": usuario.nome,
         "login": usuario.login,
-        "tipo_acesso": usuario.tipo_acesso
+        "tipo_acesso": usuario.tipo_acesso,
+        "escola_id": usuario.escola_id
     }

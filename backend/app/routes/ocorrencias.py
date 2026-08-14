@@ -4,10 +4,15 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import SessionLocal
 from app.models.ocorrencia import Ocorrencia
+from app.models.aluno import Aluno
+from app.models.professora import Professora
+from app.models.profissional_enfermagem import ProfissionalEnfermagem
+from app.models.tipo_ocorrencia import TipoOcorrencia
 from app.models.usuario import Usuario
 from app.schemas.ocorrencia import OcorrenciaCreate, OcorrenciaResponse
 from app.dependencies.auth import (
     get_usuario_atual,
+    get_escola_id_atual,
     admin_ou_enfermagem,
     qualquer_usuario,
 )
@@ -36,11 +41,41 @@ def get_db():
 def criar_ocorrencia(
     dados: OcorrenciaCreate,
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_atual)
+    usuario: Usuario = Depends(get_usuario_atual),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
+    # Confere que aluno, professora, profissional e tipo de ocorrência
+    # pertencem TODOS à escola do usuário logado — evita registrar uma
+    # ocorrência cruzando dados de escolas diferentes.
+    aluno = db.query(Aluno).filter(
+        Aluno.id == dados.aluno_id, Aluno.escola_id == escola_id
+    ).first()
+    if not aluno:
+        raise HTTPException(status_code=404, detail="Aluno não encontrado")
+
+    professora = db.query(Professora).filter(
+        Professora.id == dados.professora_id, Professora.escola_id == escola_id
+    ).first()
+    if not professora:
+        raise HTTPException(status_code=404, detail="Professora não encontrada")
+
+    profissional = db.query(ProfissionalEnfermagem).filter(
+        ProfissionalEnfermagem.id == dados.profissional_id,
+        ProfissionalEnfermagem.escola_id == escola_id,
+    ).first()
+    if not profissional:
+        raise HTTPException(status_code=404, detail="Profissional não encontrado")
+
+    tipo = db.query(TipoOcorrencia).filter(
+        TipoOcorrencia.id == dados.tipo_ocorrencia_id,
+        TipoOcorrencia.escola_id == escola_id,
+    ).first()
+    if not tipo:
+        raise HTTPException(status_code=404, detail="Tipo de ocorrência não encontrado")
+
     ocorrencia = Ocorrencia(
         **dados.model_dump(),
-        usuario_registrou_id=usuario.id  
+        usuario_registrou_id=usuario.id  # 🚀 Agora pega o ID do usuário logado via JWT!
     )
 
     db.add(ocorrencia)
@@ -48,7 +83,7 @@ def criar_ocorrencia(
     db.refresh(ocorrencia)
 
     # Busca a ocorrência criada recarregando os relacionamentos para o Schema
-    return buscar_ocorrencia(ocorrencia.id, db, usuario)
+    return buscar_ocorrencia(ocorrencia.id, db, escola_id)
 
 
 @router.get(
@@ -61,16 +96,19 @@ def listar_ocorrencias(
     data_inicio: date | None = None,
     data_fim: date | None = None,
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_atual)
+    escola_id: int = Depends(get_escola_id_atual),
 ):
+    # Ocorrencia não tem escola_id direto — isolamento vem do aluno.
     consulta = (
         db.query(Ocorrencia)
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
         .options(
             joinedload(Ocorrencia.aluno),
             joinedload(Ocorrencia.professora),
             joinedload(Ocorrencia.profissional),
             joinedload(Ocorrencia.tipo_ocorrencia)
         )
+        .filter(Aluno.escola_id == escola_id)
     )
 
     if aluno_id:
@@ -93,17 +131,18 @@ def listar_ocorrencias(
 def buscar_ocorrencia(
     ocorrencia_id: int,
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_atual)
+    escola_id: int = Depends(get_escola_id_atual),
 ):
     ocorrencia = (
         db.query(Ocorrencia)
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
         .options(
             joinedload(Ocorrencia.aluno),
             joinedload(Ocorrencia.professora),
             joinedload(Ocorrencia.profissional),
             joinedload(Ocorrencia.tipo_ocorrencia)
         )
-        .filter(Ocorrencia.id == ocorrencia_id)
+        .filter(Ocorrencia.id == ocorrencia_id, Aluno.escola_id == escola_id)
         .first()
     )
 

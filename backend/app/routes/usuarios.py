@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
-from app.dependencies.auth import somente_admin, get_usuario_atual
+from app.dependencies.auth import somente_admin, get_usuario_atual, get_escola_id_atual
 from app.models.usuario import Usuario
 from app.auth.security import gerar_hash_senha
 from app.schemas.usuario import UsuarioCreate, UsuarioUpdate, UsuarioResponse
@@ -28,22 +28,38 @@ def get_db():
 
 
 @router.get("/", response_model=list[UsuarioResponse])
-def listar_usuarios(db: Session = Depends(get_db)):
-    return db.query(Usuario).order_by(Usuario.nome).all()
+def listar_usuarios(
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
+):
+    return (
+        db.query(Usuario)
+        .filter(Usuario.escola_id == escola_id)
+        .order_by(Usuario.nome)
+        .all()
+    )
 
 
 @router.post("/", response_model=UsuarioResponse, status_code=201)
-def criar_usuario(dados: UsuarioCreate, db: Session = Depends(get_db)):
+def criar_usuario(
+    dados: UsuarioCreate,
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
+):
     if dados.tipo_acesso not in TIPOS_VALIDOS:
         raise HTTPException(400, "Tipo de acesso inválido")
 
-    existente = db.query(Usuario).filter(Usuario.login == dados.login).first()
+    # Login único por escola (duas escolas podem ter cada uma seu "admin").
+    existente = db.query(Usuario).filter(
+        Usuario.login == dados.login, Usuario.escola_id == escola_id
+    ).first()
     if existente:
-        raise HTTPException(400, "Já existe um usuário com esse login")
+        raise HTTPException(400, "Já existe um usuário com esse login nesta escola")
 
     usuario = Usuario(
         nome=dados.nome,
         login=dados.login,
+        escola_id=escola_id,
         senha_hash=gerar_hash_senha(dados.senha),
         tipo_acesso=dados.tipo_acesso,
         ativo=True,
@@ -62,8 +78,11 @@ def atualizar_usuario(
     dados: UsuarioUpdate,
     db: Session = Depends(get_db),
     usuario_logado: Usuario = Depends(get_usuario_atual),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    usuario = db.query(Usuario).filter(
+        Usuario.id == usuario_id, Usuario.escola_id == escola_id
+    ).first()
     if not usuario:
         raise HTTPException(404, "Usuário não encontrado")
 
@@ -96,8 +115,11 @@ def desativar_usuario(
     usuario_id: int,
     db: Session = Depends(get_db),
     usuario_logado: Usuario = Depends(get_usuario_atual),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    usuario = db.query(Usuario).filter(
+        Usuario.id == usuario_id, Usuario.escola_id == escola_id
+    ).first()
     if not usuario:
         raise HTTPException(404, "Usuário não encontrado")
 

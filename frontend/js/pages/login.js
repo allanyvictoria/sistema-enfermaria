@@ -3,6 +3,14 @@
 // =========================================================
 
 function renderLogin() {
+  const escola = EscolaStore.get();
+
+  // Sem escola selecionada, não tem como logar — manda pra tela de seleção.
+  if (!escola) {
+    location.hash = "#/selecionar-escola";
+    return;
+  }
+
   const app = document.getElementById("app");
   app.innerHTML = `
     <div class="login-screen">
@@ -18,7 +26,11 @@ function renderLogin() {
             <span>ENFERMARIA ESCOLAR</span>
           </div>
           <h2>Bem-vinda(o) de volta</h2>
-          <p style="margin-bottom:22px;">Entre com suas credenciais para acessar o sistema.</p>
+          <p style="margin-bottom:6px;">Entre com suas credenciais para acessar o sistema.</p>
+          <p style="margin-bottom:22px;font-size:13px;color:var(--ink-faint);">
+            Escola: <strong>${escola.nome}</strong> ·
+            <a href="#/selecionar-escola" id="link-trocar-escola" style="color:var(--blue-600);text-decoration:underline;">trocar</a>
+          </p>
 
           <div class="form-error" id="login-error"></div>
 
@@ -40,6 +52,11 @@ function renderLogin() {
     </div>
   `;
 
+  const linkTrocar = document.getElementById("link-trocar-escola");
+  linkTrocar.addEventListener("click", () => {
+    EscolaStore.clear();
+  });
+
   const form = document.getElementById("form-login");
   const erroBox = document.getElementById("login-error");
   const btn = document.getElementById("btn-entrar");
@@ -60,19 +77,19 @@ function renderLogin() {
     btn.textContent = "Entrando...";
 
     try {
-      const resp = await Api.auth.login(login, senha);
+      const resp = await Api.auth.login(login, senha, escola.id);
 
       // Guarda o token antes de buscar o nome completo em /auth/me
       AuthStore.set({
         access_token: resp.access_token,
-        usuario: { id: resp.usuario_id, nome: login, login, tipo_acesso: resp.tipo_acesso }
+        usuario: { id: resp.usuario_id, nome: login, login, tipo_acesso: resp.tipo_acesso, escola_id: resp.escola_id }
       });
 
       let usuario;
       try {
         usuario = await Api.auth.me();
       } catch {
-        usuario = { id: resp.usuario_id, nome: login, login, tipo_acesso: resp.tipo_acesso };
+        usuario = { id: resp.usuario_id, nome: login, login, tipo_acesso: resp.tipo_acesso, escola_id: resp.escola_id };
       }
 
       AuthStore.set({
@@ -81,7 +98,8 @@ function renderLogin() {
           id: usuario.id,
           nome: usuario.nome,
           login: usuario.login,
-          tipo_acesso: usuario.tipo_acesso
+          tipo_acesso: usuario.tipo_acesso,
+          escola_id: usuario.escola_id
         }
       });
       showToast(`Bem-vinda(o), ${usuario.nome.split(" ")[0]}!`, "success");

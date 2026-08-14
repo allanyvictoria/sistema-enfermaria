@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
+from app.dependencies.auth import get_escola_id_atual
 from app.models.professora import Professora
-from app.models.turma import Turma  
+from app.models.turma import Turma
+from app.models.sala import Sala
 from app.schemas.professora import ProfessoraCreate, ProfessoraResponse
 
 
@@ -22,17 +24,22 @@ def get_db():
 
 
 @router.get("/", response_model=list[ProfessoraResponse])
-def listar_professoras(db: Session = Depends(get_db)):
-    return db.query(Professora).all()
+def listar_professoras(
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
+):
+    return db.query(Professora).filter(Professora.escola_id == escola_id).all()
 
 
 @router.get("/{professora_id}", response_model=ProfessoraResponse)
 def buscar_professora(
     professora_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
     professora = db.query(Professora).filter(
-        Professora.id == professora_id
+        Professora.id == professora_id,
+        Professora.escola_id == escola_id,
     ).first()
 
     if not professora:
@@ -44,9 +51,10 @@ def buscar_professora(
 @router.post("/", response_model=ProfessoraResponse, status_code=201)
 def criar_professora(
     dados: ProfessoraCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    professora = Professora(**dados.model_dump())
+    professora = Professora(**dados.model_dump(), escola_id=escola_id)
 
     db.add(professora)
     db.commit()
@@ -59,10 +67,12 @@ def criar_professora(
 def atualizar_professora(
     professora_id: int,
     dados: ProfessoraCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
     professora = db.query(Professora).filter(
-        Professora.id == professora_id
+        Professora.id == professora_id,
+        Professora.escola_id == escola_id,
     ).first()
 
     if not professora:
@@ -80,10 +90,12 @@ def atualizar_professora(
 @router.delete("/{professora_id}")
 def desativar_professora(
     professora_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
     professora = db.query(Professora).filter(
-        Professora.id == professora_id
+        Professora.id == professora_id,
+        Professora.escola_id == escola_id,
     ).first()
 
     if not professora:
@@ -100,13 +112,23 @@ def desativar_professora(
 def vincular_turma(
     professora_id: int,
     turma_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    professora = db.query(Professora).filter(Professora.id == professora_id).first()
+    professora = db.query(Professora).filter(
+        Professora.id == professora_id,
+        Professora.escola_id == escola_id,
+    ).first()
     if not professora:
         raise HTTPException(404, "Professora não encontrada")
 
-    turma = db.query(Turma).filter(Turma.id == turma_id).first()
+    # Turma não tem escola_id direto — a escola dela vem da sala.
+    turma = (
+        db.query(Turma)
+        .join(Sala, Turma.sala_id == Sala.id)
+        .filter(Turma.id == turma_id, Sala.escola_id == escola_id)
+        .first()
+    )
     if not turma:
         raise HTTPException(404, "Turma não encontrada")
 
@@ -121,13 +143,22 @@ def vincular_turma(
 def desvincular_turma(
     professora_id: int,
     turma_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    professora = db.query(Professora).filter(Professora.id == professora_id).first()
+    professora = db.query(Professora).filter(
+        Professora.id == professora_id,
+        Professora.escola_id == escola_id,
+    ).first()
     if not professora:
         raise HTTPException(404, "Professora não encontrada")
 
-    turma = db.query(Turma).filter(Turma.id == turma_id).first()
+    turma = (
+        db.query(Turma)
+        .join(Sala, Turma.sala_id == Sala.id)
+        .filter(Turma.id == turma_id, Sala.escola_id == escola_id)
+        .first()
+    )
     if not turma:
         raise HTTPException(404, "Turma não encontrada")
 

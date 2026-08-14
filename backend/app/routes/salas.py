@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
+from app.dependencies.auth import get_escola_id_atual
 from app.models.sala import Sala
 from app.schemas.sala import SalaCreate, SalaResponse
 
@@ -22,16 +23,24 @@ def get_db():
 
 
 @router.get("/", response_model=list[SalaResponse])
-def listar_salas(db: Session = Depends(get_db)):
-    return db.query(Sala).all()
+def listar_salas(
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
+):
+    return db.query(Sala).filter(Sala.escola_id == escola_id).all()
 
 
 @router.get("/{sala_id}", response_model=SalaResponse)
 def buscar_sala(
     sala_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    sala = db.query(Sala).filter(Sala.id == sala_id).first()
+    sala = (
+        db.query(Sala)
+        .filter(Sala.id == sala_id, Sala.escola_id == escola_id)
+        .first()
+    )
 
     if not sala:
         raise HTTPException(
@@ -45,11 +54,13 @@ def buscar_sala(
 @router.post("/", response_model=SalaResponse, status_code=201)
 def criar_sala(
     dados: SalaCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
     sala = Sala(
         nome=dados.nome,
-        descricao=dados.descricao
+        descricao=dados.descricao,
+        escola_id=escola_id
     )
 
     db.add(sala)
@@ -63,9 +74,14 @@ def criar_sala(
 def atualizar_sala(
     sala_id: int,
     dados: SalaCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    sala = db.query(Sala).filter(Sala.id == sala_id).first()
+    sala = (
+        db.query(Sala)
+        .filter(Sala.id == sala_id, Sala.escola_id == escola_id)
+        .first()
+    )
 
     if not sala:
         raise HTTPException(
@@ -85,9 +101,14 @@ def atualizar_sala(
 @router.delete("/{sala_id}")
 def desativar_sala(
     sala_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    sala = db.query(Sala).filter(Sala.id == sala_id).first()
+    sala = (
+        db.query(Sala)
+        .filter(Sala.id == sala_id, Sala.escola_id == escola_id)
+        .first()
+    )
 
     if not sala:
         raise HTTPException(

@@ -36,12 +36,12 @@ async function renderAlunos() {
   try {
     _alunosCache = await Api.alunos.listar();
   } catch (err) {
-    if (!document.body.contains(content)) return; // 👈 ADICIONADO
+    if (!document.body.contains(content)) return;
     grid.innerHTML = emptyStateHtml("Não foi possível carregar os alunos", err.message);
     return;
   }
 
-  if (!document.body.contains(content)) return; // 👈 ADICIONADO
+  if (!document.body.contains(content)) return; 
 
   const desenharGrid = (lista) => {
     if (!lista.length) {

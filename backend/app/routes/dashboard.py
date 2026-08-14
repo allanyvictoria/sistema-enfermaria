@@ -8,7 +8,7 @@ from app.database import SessionLocal
 from app.models.ocorrencia import Ocorrencia
 from app.models.aluno import Aluno
 from app.models.tipo_ocorrencia import TipoOcorrencia
-from app.dependencies.auth import qualquer_usuario, get_usuario_atual
+from app.dependencies.auth import qualquer_usuario, get_usuario_atual, get_escola_id_atual
 from app.models.usuario import Usuario
 
 router = APIRouter(
@@ -29,44 +29,64 @@ def get_db():
 @router.get("/resumo")
 def resumo_dashboard(
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_atual)
+    escola_id: int = Depends(get_escola_id_atual),
 ):
     hoje = date.today()
     mes_atual = hoje.month
     ano_atual = hoje.year
 
     # ----------------------------------------------------
-    #  1. INDICADORES DO MÊS
+    # 📌 1. INDICADORES DO MÊS
     # ----------------------------------------------------
+    # Ocorrencia não tem escola_id direto — isolamento vem do aluno,
+    # então toda query abaixo faz join com Aluno e filtra por escola_id.
+
     # Total de atendimentos no mês
-    atendimentos_mes = db.query(func.count(Ocorrencia.id)).filter(
-        extract('month', Ocorrencia.data_hora) == mes_atual,
-        extract('year', Ocorrencia.data_hora) == ano_atual
-    ).scalar() or 0
+    atendimentos_mes = (
+        db.query(func.count(Ocorrencia.id))
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
+        .filter(
+            Aluno.escola_id == escola_id,
+            extract('month', Ocorrencia.data_hora) == mes_atual,
+            extract('year', Ocorrencia.data_hora) == ano_atual
+        ).scalar() or 0
+    )
 
     # Total de crianças únicas atendidas no mês
-    criancas_atendidas = db.query(func.count(func.distinct(Ocorrencia.aluno_id))).filter(
-        extract('month', Ocorrencia.data_hora) == mes_atual,
-        extract('year', Ocorrencia.data_hora) == ano_atual
-    ).scalar() or 0
+    criancas_atendidas = (
+        db.query(func.count(func.distinct(Ocorrencia.aluno_id)))
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
+        .filter(
+            Aluno.escola_id == escola_id,
+            extract('month', Ocorrencia.data_hora) == mes_atual,
+            extract('year', Ocorrencia.data_hora) == ano_atual
+        ).scalar() or 0
+    )
 
     # Total de salas/turmas (professoras) envolvidas no mês
-    salas_envolvidas = db.query(func.count(func.distinct(Ocorrencia.professora_id))).filter(
-        extract('month', Ocorrencia.data_hora) == mes_atual,
-        extract('year', Ocorrencia.data_hora) == ano_atual
-    ).scalar() or 0
+    salas_envolvidas = (
+        db.query(func.count(func.distinct(Ocorrencia.professora_id)))
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
+        .filter(
+            Aluno.escola_id == escola_id,
+            extract('month', Ocorrencia.data_hora) == mes_atual,
+            extract('year', Ocorrencia.data_hora) == ano_atual
+        ).scalar() or 0
+    )
 
     # ----------------------------------------------------
-    #  2. GRÁFICOS
+    # 📊 2. GRÁFICOS
     # ----------------------------------------------------
     
-    #  A. Ocorrências por Dia no Mês
+    # 📈 A. Ocorrências por Dia no Mês
     por_dia_query = (
         db.query(
             func.date(Ocorrencia.data_hora).label("data"),
             func.count(Ocorrencia.id).label("quantidade")
         )
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
         .filter(
+            Aluno.escola_id == escola_id,
             extract('month', Ocorrencia.data_hora) == mes_atual,
             extract('year', Ocorrencia.data_hora) == ano_atual
         )
@@ -76,14 +96,16 @@ def resumo_dashboard(
     )
     ocorrencias_por_dia = [{"data": str(item.data), "quantidade": item.quantidade} for item in por_dia_query]
 
-    # B. Ocorrências por Tipo (Queda, Dor, Ferimento, etc.)
+    # 🩺 B. Ocorrências por Tipo (Queda, Dor, Ferimento, etc.)
     por_tipo_query = (
         db.query(
             TipoOcorrencia.nome.label("tipo"),
             func.count(Ocorrencia.id).label("quantidade")
         )
         .join(Ocorrencia, Ocorrencia.tipo_ocorrencia_id == TipoOcorrencia.id)
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
         .filter(
+            Aluno.escola_id == escola_id,
             extract('month', Ocorrencia.data_hora) == mes_atual,
             extract('year', Ocorrencia.data_hora) == ano_atual
         )
@@ -93,17 +115,20 @@ def resumo_dashboard(
     )
     ocorrencias_por_tipo = [{"tipo": item.tipo, "quantidade": item.quantidade} for item in por_tipo_query]
 
-   # C. Ocorrências por Sala / Turma (Turma do Aluno + Professora)
-    
+   # 🏫 C. Ocorrências por Sala / Turma (Turma do Aluno + Professora)
+    # Buscamos as ocorrências do mês, já restritas à escola
     ocorrencias_mes = (
         db.query(Ocorrencia)
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
         .filter(
+            Aluno.escola_id == escola_id,
             extract('month', Ocorrencia.data_hora) == mes_atual,
             extract('year', Ocorrencia.data_hora) == ano_atual
         )
         .all()
     )
 
+    # Agrupamos em Python para usar a @property aluno.turma sem erros de SQL
     contagem_salas = {}
 
     for oc in ocorrencias_mes:
@@ -129,7 +154,7 @@ def resumo_dashboard(
         }
         for (turma, prof), qtd in sorted(contagem_salas.items(), key=lambda item: item[1], reverse=True)
     ]
-    # D. Ocorrências por Turno (Manhã < 12h | Tarde >= 12h)
+    # ☀️ D. Ocorrências por Turno (Manhã < 12h | Tarde >= 12h)
     turno_expr = case(
         (extract('hour', Ocorrencia.data_hora) < 12, 'Manhã'),
         else_='Tarde'
@@ -140,7 +165,9 @@ def resumo_dashboard(
             turno_expr,
             func.count(Ocorrencia.id).label("quantidade")
         )
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
         .filter(
+            Aluno.escola_id == escola_id,
             extract('month', Ocorrencia.data_hora) == mes_atual,
             extract('year', Ocorrencia.data_hora) == ano_atual
         )

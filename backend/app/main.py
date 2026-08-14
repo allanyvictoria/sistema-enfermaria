@@ -18,7 +18,8 @@ from app.routes import (
     matriculas,
     dashboard,
     relatorios,
-    usuarios
+    usuarios,
+    escolas
 )
 
 
@@ -61,6 +62,7 @@ app.include_router(relatorios.router)
 app.include_router(turmas.router)
 app.include_router(matriculas.router)
 app.include_router(usuarios.router)
+app.include_router(escolas.router)
 
 @app.get("/")
 def inicio():

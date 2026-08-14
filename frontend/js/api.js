@@ -32,7 +32,7 @@ async function apiRequest(caminho, { method = "GET", body, autenticado = true, b
     );
   }
 
-  if (resposta.status === 401) {
+  if (resposta.status === 401 && autenticado) {
     AuthStore.clear();
     if (location.hash !== "#/login") {
       location.hash = "#/login";
@@ -59,8 +59,11 @@ async function apiRequest(caminho, { method = "GET", body, autenticado = true, b
 }
 
 const Api = {
+  escolas: {
+    listar: () => apiRequest("/escolas", { autenticado: false })
+  },
   auth: {
-    login: (login, senha) => apiRequest("/auth/login", { method: "POST", body: { login, senha }, autenticado: false }),
+    login: (login, senha, escolaId) => apiRequest("/auth/login", { method: "POST", body: { login, senha, escola_id: escolaId }, autenticado: false }),
     me: () => apiRequest("/auth/me")
   },
   dashboard: {

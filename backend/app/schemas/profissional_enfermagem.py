@@ -11,6 +11,7 @@ class ProfissionalEnfermagemCreate(BaseModel):
 class ProfissionalEnfermagemResponse(ProfissionalEnfermagemCreate):
     id: int
     ativa: bool
+    escola_id: int  # 👈 ADICIONADO
 
     class Config:
         from_attributes = True

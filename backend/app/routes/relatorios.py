@@ -9,7 +9,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.database import SessionLocal
-from app.dependencies.auth import qualquer_usuario
+from app.dependencies.auth import qualquer_usuario, get_escola_id_atual
 from app.models.ocorrencia import Ocorrencia
 from app.models.aluno import Aluno
 from app.models.tipo_ocorrencia import TipoOcorrencia
@@ -70,7 +70,8 @@ def obter_estilos():
 @router.get("/diario")
 def relatorio_diario(
     data: date | None = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
     data_consulta = data or date.today()
     inicio_dia = datetime.combine(data_consulta, time.min)
@@ -78,12 +79,17 @@ def relatorio_diario(
 
     ocorrencias = (
         db.query(Ocorrencia)
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
         .options(
             joinedload(Ocorrencia.aluno),
             joinedload(Ocorrencia.tipo_ocorrencia),
             joinedload(Ocorrencia.profissional)
         )
-        .filter(Ocorrencia.data_hora >= inicio_dia, Ocorrencia.data_hora <= fim_dia)
+        .filter(
+            Aluno.escola_id == escola_id,
+            Ocorrencia.data_hora >= inicio_dia,
+            Ocorrencia.data_hora <= fim_dia,
+        )
         .order_by(Ocorrencia.data_hora.asc())
         .all()
     )
@@ -136,20 +142,36 @@ def relatorio_diario(
 @router.get("/semanal")
 def relatorio_semanal(
     data_inicio: date | None = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
     inicio = data_inicio or (date.today() - timedelta(days=6))
     fim = inicio + timedelta(days=6)
     dt_inicio = datetime.combine(inicio, time.min)
     dt_fim = datetime.combine(fim, time.max)
 
-    total_atendimentos = db.query(func.count(Ocorrencia.id)).filter(Ocorrencia.data_hora >= dt_inicio, Ocorrencia.data_hora <= dt_fim).scalar() or 0
-    total_criancas = db.query(func.count(func.distinct(Ocorrencia.aluno_id))).filter(Ocorrencia.data_hora >= dt_inicio, Ocorrencia.data_hora <= dt_fim).scalar() or 0
+    base = (
+        db.query(Ocorrencia)
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
+        .filter(
+            Aluno.escola_id == escola_id,
+            Ocorrencia.data_hora >= dt_inicio,
+            Ocorrencia.data_hora <= dt_fim,
+        )
+    )
+
+    total_atendimentos = base.with_entities(func.count(Ocorrencia.id)).scalar() or 0
+    total_criancas = base.with_entities(func.count(func.distinct(Ocorrencia.aluno_id))).scalar() or 0
 
     por_tipo = (
         db.query(TipoOcorrencia.nome, func.count(Ocorrencia.id))
         .join(Ocorrencia, Ocorrencia.tipo_ocorrencia_id == TipoOcorrencia.id)
-        .filter(Ocorrencia.data_hora >= dt_inicio, Ocorrencia.data_hora <= dt_fim)
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
+        .filter(
+            Aluno.escola_id == escola_id,
+            Ocorrencia.data_hora >= dt_inicio,
+            Ocorrencia.data_hora <= dt_fim,
+        )
         .group_by(TipoOcorrencia.nome).all()
     )
 
@@ -183,19 +205,35 @@ def relatorio_semanal(
 def relatorio_mensal(
     mes: int | None = None,
     ano: int | None = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
     hoje = date.today()
     m = mes or hoje.month
     a = ano or hoje.year
 
-    total_atendimentos = db.query(func.count(Ocorrencia.id)).filter(extract('month', Ocorrencia.data_hora) == m, extract('year', Ocorrencia.data_hora) == a).scalar() or 0
-    total_criancas = db.query(func.count(func.distinct(Ocorrencia.aluno_id))).filter(extract('month', Ocorrencia.data_hora) == m, extract('year', Ocorrencia.data_hora) == a).scalar() or 0
+    base = (
+        db.query(Ocorrencia)
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
+        .filter(
+            Aluno.escola_id == escola_id,
+            extract('month', Ocorrencia.data_hora) == m,
+            extract('year', Ocorrencia.data_hora) == a,
+        )
+    )
+
+    total_atendimentos = base.with_entities(func.count(Ocorrencia.id)).scalar() or 0
+    total_criancas = base.with_entities(func.count(func.distinct(Ocorrencia.aluno_id))).scalar() or 0
 
     por_tipo = (
         db.query(TipoOcorrencia.nome, func.count(Ocorrencia.id))
         .join(Ocorrencia, Ocorrencia.tipo_ocorrencia_id == TipoOcorrencia.id)
-        .filter(extract('month', Ocorrencia.data_hora) == m, extract('year', Ocorrencia.data_hora) == a)
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
+        .filter(
+            Aluno.escola_id == escola_id,
+            extract('month', Ocorrencia.data_hora) == m,
+            extract('year', Ocorrencia.data_hora) == a,
+        )
         .group_by(TipoOcorrencia.nome).order_by(func.count(Ocorrencia.id).desc()).all()
     )
 
@@ -228,7 +266,8 @@ def relatorio_mensal(
 @router.get("/aluno/{aluno_id}")
 def relatorio_historico_aluno(
     aluno_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
     aluno = (
         db.query(Aluno)
@@ -237,7 +276,7 @@ def relatorio_historico_aluno(
             joinedload(Aluno.ocorrencias).joinedload(Ocorrencia.profissional),
             joinedload(Aluno.responsaveis),
         )
-        .filter(Aluno.id == aluno_id)
+        .filter(Aluno.id == aluno_id, Aluno.escola_id == escola_id)
         .first()
     )
 

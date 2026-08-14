@@ -5,6 +5,7 @@ from app.database import SessionLocal
 from app.dependencies.auth import (
     admin_ou_enfermagem,
     get_usuario_atual,
+    get_escola_id_atual,
     somente_admin,
     qualquer_usuario,
 )
@@ -39,21 +40,28 @@ def get_db():
 )
 def listar_alunos(
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_atual),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    print(f"Usuário autenticado: {usuario.id} - {usuario.nome} ({usuario.tipo_acesso})")
-    return db.query(Aluno).options(joinedload(Aluno.matriculas).joinedload(Matricula.turma)).all()
+    return (
+        db.query(Aluno)
+        .options(joinedload(Aluno.matriculas).joinedload(Matricula.turma))
+        .filter(Aluno.escola_id == escola_id)
+        .all()
+    )
 
 
 @router.get("/{aluno_id}", response_model=AlunoResponse)
 def buscar_aluno(
     aluno_id: int,
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_atual),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    print(f"Usuário autenticado: {usuario.id} - {usuario.nome} ({usuario.tipo_acesso})")
-
-    aluno = db.query(Aluno).options(joinedload(Aluno.matriculas).joinedload(Matricula.turma)).filter(Aluno.id == aluno_id).first()
+    aluno = (
+        db.query(Aluno)
+        .options(joinedload(Aluno.matriculas).joinedload(Matricula.turma))
+        .filter(Aluno.id == aluno_id, Aluno.escola_id == escola_id)
+        .first()
+    )
 
     if not aluno:
         raise HTTPException(
@@ -73,11 +81,10 @@ def buscar_aluno(
 def criar_aluno(
     dados: AlunoCreate,
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_atual),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    print(f"Usuário autenticado: {usuario.id} - {usuario.nome} ({usuario.tipo_acesso})")
-
-    aluno = Aluno(**dados.model_dump())
+    # escola_id nunca vem do frontend — sempre da escola do usuário logado.
+    aluno = Aluno(**dados.model_dump(), escola_id=escola_id)
 
     db.add(aluno)
     db.commit()
@@ -91,11 +98,13 @@ def atualizar_aluno(
     aluno_id: int,
     dados: AlunoCreate,
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_atual),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    print(f"Usuário autenticado: {usuario.id} - {usuario.nome} ({usuario.tipo_acesso})")
-
-    aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
+    aluno = (
+        db.query(Aluno)
+        .filter(Aluno.id == aluno_id, Aluno.escola_id == escola_id)
+        .first()
+    )
 
     if not aluno:
         raise HTTPException(
@@ -103,6 +112,7 @@ def atualizar_aluno(
             detail="Aluno não encontrado"
         )
 
+    # 📌 Atualização dinâmica: altera no objeto Aluno todos os campos recebidos no JSON
     for key, value in dados.model_dump(exclude_unset=True).items():
         setattr(aluno, key, value)
 
@@ -120,10 +130,13 @@ def desativar_aluno(
     aluno_id: int,
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_usuario_atual),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
-    print(f"Usuário autenticado: {usuario.id} - {usuario.nome} ({usuario.tipo_acesso})")
-
-    aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
+    aluno = (
+        db.query(Aluno)
+        .filter(Aluno.id == aluno_id, Aluno.escola_id == escola_id)
+        .first()
+    )
 
     if not aluno:
         raise HTTPException(
@@ -150,7 +163,7 @@ def desativar_aluno(
 def historico_aluno(
     aluno_id: int,
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(get_usuario_atual),
+    escola_id: int = Depends(get_escola_id_atual),
 ):
     aluno = (
         db.query(Aluno)
@@ -158,7 +171,7 @@ def historico_aluno(
             joinedload(Aluno.ocorrencias),
             joinedload(Aluno.responsaveis),
         )
-        .filter(Aluno.id == aluno_id)
+        .filter(Aluno.id == aluno_id, Aluno.escola_id == escola_id)
         .first()
     )
 

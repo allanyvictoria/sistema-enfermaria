@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import BigInteger, Boolean, String, TIMESTAMP
+from sqlalchemy import BigInteger, Boolean, String, TIMESTAMP, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -14,15 +14,24 @@ class Usuario(Base):
         autoincrement=True
     )
 
+    # 👈 ADICIONADO: cada usuário pertence a uma escola
+    escola_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("escola.id"),
+        nullable=False
+    )
+
     nome: Mapped[str] = mapped_column(
         String(150),
         nullable=False
     )
 
+    # login não é mais globalmente único — só dentro da mesma escola
+    # (a unicidade combinada é garantida pelo índice único no banco:
+    # idx_usuario_login_escola)
     login: Mapped[str] = mapped_column(
         String(100),
         nullable=False,
-        unique=True,
         index=True
     )
 
