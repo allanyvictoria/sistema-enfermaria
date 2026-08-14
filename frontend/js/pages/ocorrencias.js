@@ -112,13 +112,17 @@ async function renderOcorrencias() {
 
   await carregar();
 
-  document.getElementById("btn-filtrar").addEventListener("click", () => {
+const btnFiltrar = document.getElementById("btn-filtrar");
+if (btnFiltrar) {
+  btnFiltrar.addEventListener("click", () => {
     carregar({
-      aluno_id: selAluno.value || undefined,
-      data_inicio: document.getElementById("f-inicio").value || undefined,
-      data_fim: document.getElementById("f-fim").value || undefined
+      aluno_id: selAluno?.value || undefined,
+      data_inicio: document.getElementById("f-inicio")?.value || undefined,
+      data_fim: document.getElementById("f-fim")?.value || undefined
     });
   });
+}
+
   document.getElementById("btn-limpar-filtro").addEventListener("click", () => {
     selAluno.value = "";
     document.getElementById("f-inicio").value = "";
