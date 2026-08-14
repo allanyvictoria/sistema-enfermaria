@@ -428,3 +428,80 @@ tbody tr.clickable:hover{background:var(--blue-50);}
   .content{padding:16px 18px 32px;}
   .chart-grid,.chart-row-2{grid-template-columns:1fr;}
 }
+
+
+/* ---------- Ajustes responsivos para tabelas no celular ---------- */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Deixa a rolagem fluida no celular */
+  margin-bottom: 16px;
+}
+
+@media (max-width: 600px) {
+  table {
+    font-size: 13px; /* Reduz levemente a letra para caber mais conteúdo */
+  }
+  
+  thead th, tbody td {
+    padding: 10px 12px; /* Diminui o espaçamento interno para otimizar espaço */
+  }
+
+  .row-actions {
+    flex-direction: column; /* Se tiver botões de ação na linha, empilha eles no celular */
+    gap: 4px;
+  }
+}
+
+
+@media (max-width: 600px) {
+  .stat-grid {
+    grid-template-columns: 1fr; /* Empilha os cards de estatísticas no celular */
+  }
+  
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .topbar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+
+@media (max-width: 920px) {
+  .login-card {
+    grid-template-columns: 1fr;
+  }
+  .login-visual {
+    display: none;
+  }
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 80;
+    transform: translateX(-105%);
+    transition: transform .2s ease;
+    box-shadow: 0 0 40px rgba(0,0,0,.15);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .menu-toggle {
+    display: flex;
+  }
+  .topbar {
+    padding: 18px 18px 0;
+  }
+  .content {
+    padding: 16px 18px 32px;
+  }
+  .chart-grid, .chart-row-2 {
+    grid-template-columns: 1fr;
+  }
+}
