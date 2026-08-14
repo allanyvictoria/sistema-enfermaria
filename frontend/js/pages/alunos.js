@@ -270,32 +270,33 @@ async function renderAlunos() {
 
           try {
             if (editando) {
-              // 1. Atualiza os dados cadastrais do aluno
+              // 1. Atualiza os dados cadastrais
               await Api.alunos.atualizar(aluno.id, dados);
               
-              // 2. Gerencia a turma / matrícula
-              // (Se o seu backend tiver uma rota específica para atualizar matrícula ou se você gerenciar isso, 
-              // certifique-se de que a turma está sendo enviada ou tratada aqui)
-              if (turmaSel) {
-                const turmaIdNum = Number(turmaSel);
-                // Verifica se a turma mudou em relação à que ele já tinha
-                if (!aluno.turma || aluno.turma.id !== turmaIdNum) {
-                  const hoje = new Date().toISOString().slice(0, 10);
-                  // Se o seu backend tiver endpoint de atualizar matrícula, use-o, ou crie a nova matrícula ativa:
-                  await Api.matriculas.criar({ aluno_id: aluno.id, turma_id: turmaIdNum, data_inicio: hoje });
-                }
+              // 2. Verifica se a turma foi alterada
+              const turmaIdNum = turmaSel ? Number(turmaSel) : null;
+              const turmaAntigaId = aluno.turma ? aluno.turma.id : null;
+
+              if (turmaIdNum !== turmaAntigaId) {
+                const hoje = new Date().toISOString().slice(0, 10);
+                
+                // Se ele já tinha turma, primeiro encerramos/deletamos a matrícula ativa antiga ou criamos a nova
+                // (Dependendo de como sua API de matrículas lida com isso, se não houver endpoint de delete/inativar matrícula, 
+                // podemos ajustar para atualizar)
+                await Api.matriculas.criar({ 
+                  aluno_id: aluno.id, 
+                  turma_id: turmaIdNum, 
+                  data_inicio: hoje 
+                });
               }
 
               showToast("Dados do aluno atualizados.", "success");
             } else {
-              // Criando novo aluno
               const criado = await Api.alunos.criar(dados);
-              
               if (turmaSel) {
                 const hoje = new Date().toISOString().slice(0, 10);
                 await Api.matriculas.criar({ aluno_id: criado.id, turma_id: Number(turmaSel), data_inicio: hoje });
               }
-
               showToast("Aluno cadastrado com sucesso.", "success");
             }
 

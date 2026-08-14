@@ -96,12 +96,13 @@ def criar_aluno(
 @router.put("/{aluno_id}", response_model=AlunoResponse)
 def atualizar_aluno(
     aluno_id: int,
-    dados: AlunoCreate,
+    dados: AlunoCreate, # ou um schema que aceite turma_id opcional
     db: Session = Depends(get_db),
     escola_id: int = Depends(get_escola_id_atual),
 ):
     aluno = (
         db.query(Aluno)
+        .options(joinedload(Aluno.matriculas).joinedload(Matricula.turma))
         .filter(Aluno.id == aluno_id, Aluno.escola_id == escola_id)
         .first()
     )
@@ -112,8 +113,11 @@ def atualizar_aluno(
             detail="Aluno não encontrado"
         )
 
-    # 📌 Atualização dinâmica: altera no objeto Aluno todos os campos recebidos no JSON
-    for key, value in dados.model_dump(exclude_unset=True).items():
+    # Atualiza os dados cadastrais básicos (exceto se houver campos extras como turma_id soltos se o schema for AlunoCreate puro)
+    dados_dict = dados.model_dump(exclude_unset=True)
+    
+    # Se o schema AlunoCreate não tiver turma_id, atualizamos os campos normais:
+    for key, value in dados_dict.items():
         setattr(aluno, key, value)
 
     db.commit()
