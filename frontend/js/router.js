@@ -2,7 +2,7 @@
 // Roteador simples baseado em hash (#/rota)
 // =========================================================
 
-const ROTAS_PUBLICAS = ["login"];
+const ROTAS_PUBLICAS = ["login", "selecionar-escola"];
 
 async function handleRoute() {
   fecharModal();
@@ -12,20 +12,28 @@ async function handleRoute() {
   if (!rota) rota = "login";
 
   const logado = AuthStore.isLogado();
+  const [base, sub] = rota.split("/");
 
-  if (!logado && !ROTAS_PUBLICAS.includes(rota.split("/")[0])) {
+  // Sem escola escolhida ainda: só a tela de seleção é permitida.
+  if (!EscolaStore.isSelecionada() && base !== "selecionar-escola") {
+    location.hash = "#/selecionar-escola";
+    return;
+  }
+
+  if (!logado && !ROTAS_PUBLICAS.includes(base)) {
     location.hash = "#/login";
     return;
   }
-  if (logado && rota === "login") {
+  if (logado && (rota === "login" || rota === "selecionar-escola")) {
     location.hash = "#/dashboard";
     return;
   }
 
-  const [base, sub] = rota.split("/");
-
   try {
     switch (base) {
+      case "selecionar-escola":
+        await renderSelecionarEscola();
+        break;
       case "login":
         renderLogin();
         break;
