@@ -172,12 +172,13 @@ if (btnFiltrar) {
 }
 
 async function abrirFormOcorrencia(alunosPrecarregados, aoSalvar) {
-  let professoras = [], profissionais = [], tipos = [];
+  let professoras = [], profissionais = [], tipos = [], responsaveis = [];
   try {
-    [professoras, profissionais, tipos] = await Promise.all([
+    [professoras, profissionais, tipos, responsaveis] = await Promise.all([
       Api.professoras.listar(),
       Api.profissionais.listar(),
-      Api.tiposOcorrencia.listar()
+      Api.tiposOcorrencia.listar(),
+      Api.responsaveis.listar()
     ]);
   } catch (err) {
     showToast("Não foi possível carregar os dados do formulário: " + err.message, "error");
@@ -229,7 +230,7 @@ async function abrirFormOcorrencia(alunosPrecarregados, aoSalvar) {
           </div>
           <div class="field">
             <label for="o-responsavel">Responsável que buscou (opcional)</label>
-            <select id="o-responsavel"><option value="">Nenhum / Selecione um aluno primeiro</option></select>
+            <select id="o-responsavel"><option value="">Nenhum</option>${opt(responsaveis)}</select>
           </div>
         </div>
         <div class="field" id="campo-resultado-outro" style="display:none;">
@@ -249,14 +250,12 @@ async function abrirFormOcorrencia(alunosPrecarregados, aoSalvar) {
     onMount: (overlay) => {
       const selAluno = overlay.querySelector("#o-aluno");
       const boxAlerta = overlay.querySelector("#alerta-saude-aluno");
-      const selResponsavel = overlay.querySelector("#o-responsavel");
 
-      // 🔍 Ao selecionar o aluno, busca os dados de saúde e filtra os responsáveis vinculados a ele
-      selAluno.addEventListener("change", async (e) => {
+      // Escutador para alertar sobre alergias/condições instantaneamente ao escolher o aluno
+      selAluno.addEventListener("change", (e) => {
         const idAluno = Number(e.target.value);
         const aluno = alunosPrecarregados.find(a => a.id === idAluno);
 
-        // Alerta de saúde
         if (aluno && (aluno.alergias || aluno.condicoes_saude)) {
           boxAlerta.innerHTML = `
           <div style="background:#fef9c3; border-left:4px solid #eab308; padding:10px 14px; border-radius:8px; margin-top:4px;">
@@ -267,23 +266,6 @@ async function abrirFormOcorrencia(alunosPrecarregados, aoSalvar) {
           `;
         } else {
           boxAlerta.innerHTML = "";
-        }
-
-        // Popula apenas os responsáveis vinculados a este aluno
-        selResponsavel.innerHTML = `<option value="">Nenhum</option>`;
-        if (idAluno) {
-          try {
-            const hist = await Api.alunos.historico(idAluno);
-            const responsaveisDoAluno = hist.responsaveis || [];
-            responsaveisDoAluno.forEach(r => {
-              const optEl = document.createElement("option");
-              optEl.value = r.id;
-              optEl.textContent = `${r.nome} (${r.parentesco || 'Responsável'})`;
-              selResponsavel.appendChild(optEl);
-            });
-          } catch (err) {
-            console.error("Erro ao carregar responsáveis do aluno", err);
-          }
         }
       });
 
@@ -325,84 +307,6 @@ async function abrirFormOcorrencia(alunosPrecarregados, aoSalvar) {
           showToast(err.message, "error");
         } finally {
           btn.disabled = false;
-        }
-      });
-    }
-  });
-}
-
-// 📌 Função de detalhes atualizada para permitir ver e adicionar a observação posterior (evolução)
-async function abrirDetalheOcorrencia(id) {
-  abrirModal({
-    titulo: "Detalhes do atendimento",
-    corpoHtml: loaderHtml("Carregando..."),
-    onMount: async (overlay) => {
-      let o;
-      try {
-        o = await Api.ocorrencias.buscar(id);
-      } catch (err) {
-        overlay.querySelector(".modal-body").innerHTML = emptyStateHtml("Erro", err.message);
-        return;
-      }
-
-      function renderConteudoDetalhe(atendimento) {
-        return `
-          <div class="field-row">
-            <div class="field"><label>Aluno</label><p style="color:var(--ink);font-weight:700;">${escapeHtml(atendimento.aluno.nome)}</p></div>
-            <div class="field"><label>Data / hora</label><p style="color:var(--ink);font-weight:700;">${formatarDataHora(atendimento.data_hora)}</p></div>
-          </div>
-          <div class="field-row">
-            <div class="field"><label>Tipo de ocorrência</label><p>${escapeHtml(atendimento.tipo_ocorrencia.nome)}</p></div>
-            <div class="field"><label>Turma</label><p>${escapeHtml(atendimento.aluno?.turma?.nome || "-")}</p></div>            
-          </div>
-          <div class="field-row">
-            <div class="field"><label>Professor(a)</label><p>${escapeHtml(atendimento.professora.nome)}</p></div>
-            <div class="field"><label>Profissional</label><p>${escapeHtml(atendimento.profissional.nome)} <span class="small-muted">(${escapeHtml(atendimento.profissional.funcao)})</span></p></div>
-          </div>
-          <div class="field-row">
-            <div class="field"><label>Descrição</label><p>${escapeHtml(atendimento.descricao)}</p></div>
-            <div class="field"><label>Resultado</label><p>${pillResultado(atendimento.resultado)}</p></div>
-          </div>
-          <div class="field"><label>Conduta</label><p>${escapeHtml(atendimento.conduta)}</p></div>
-          ${atendimento.observacoes ? `<div class="field"><label>Observações iniciais</label><p>${escapeHtml(atendimento.observacoes)}</p></div>` : ""}
-          
-          <hr style="margin: 16px 0; border:0; border-top:1px solid #e2e8f0;" />
-          
-          <div class="field">
-            <label style="font-weight:700; color:var(--ink);">Acompanhamento / Evolução posterior (ex: se piorou, pai buscou...)</label>
-            <div id="bloco-obs-posterior">
-              ${atendimento.observacao_posterior 
-                ? `<p style="background:#f1f5f9; padding:10px; border-radius:6px; color:#334155;">${escapeHtml(atendimento.observacao_posterior)}</p>
-                   <button class="btn btn-soft" id="btn-editar-obs-pos" style="margin-top:8px; font-size:12px;">Editar acompanhamento</button>`
-                : `<textarea id="input-obs-pos" placeholder="Adicione uma nota sobre a evolução posterior..." style="margin-bottom:8px;"></textarea>
-                   <button class="btn btn-primary" id="btn-salvar-obs-pos" style="font-size:12px;">Salvar acompanhamento</button>`
-              }
-            </div>
-          </div>
-        `;
-      }
-
-      const modalBody = overlay.querySelector(".modal-body");
-      modalBody.innerHTML = renderConteudoDetalhe(o);
-
-      // Listener para salvar ou editar a observação posterior
-      modalBody.addEventListener("click", async (e) => {
-        if (e.target.id === "btn-salvar-obs-pos" || e.target.id === "btn-editar-obs-pos") {
-          const texto = e.target.id === "btn-salvar-obs-pos" 
-            ? modalBody.querySelector("#input-obs-pos").value.trim()
-            : prompt("Atualizar acompanhamento posterior:", o.observacao_posterior || "");
-
-          if (texto !== null) {
-            try {
-              // Atualiza na API (certifique-se de ter uma rota PUT ou PATCH para ocorrências)
-              const atualizado = await Api.ocorrencias.atualizar(id, { observacao_posterior: texto });
-              o = atualizado;
-              modalBody.innerHTML = renderConteudoDetalhe(o);
-              showToast("Acompanhamento atualizado com sucesso.", "success");
-            } catch (err) {
-              showToast("Erro ao atualizar: " + err.message, "error");
-            }
-          }
         }
       });
     }
