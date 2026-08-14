@@ -144,9 +144,12 @@ async function carregarLista(cfg) {
   try {
     lista = await cfg.api.listar();
   } catch (err) {
+    if (wrap && !document.body.contains(wrap)) return; // 👈 ADICIONADO
     wrap.innerHTML = emptyStateHtml("Não foi possível carregar", err.message);
     return;
   }
+
+  if (wrap && !document.body.contains(wrap)) return; // 👈 ADICIONADO
 
   if (!lista.length) {
     wrap.innerHTML = emptyStateHtml(`Nenhum registro em ${cfg.titulo.toLowerCase()}`, "Use o botão \"Adicionar\" acima para criar o primeiro registro.");

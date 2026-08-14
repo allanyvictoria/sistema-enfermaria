@@ -13,6 +13,12 @@ async function renderRelatorios() {
     alunos = await Api.alunos.listar();
   } catch {}
 
+  // 👈 ADICIONADO: se o usuário já navegou pra outra página enquanto
+  // esperava a API responder, "content" ficou órfão (fora do documento
+  // atual). Continuar preenchendo e criando listeners nele quebraria
+  // com "Cannot read properties of null (reading 'addEventListener')".
+  if (!document.body.contains(content)) return;
+
   const hoje = new Date();
 
   content.innerHTML = `
