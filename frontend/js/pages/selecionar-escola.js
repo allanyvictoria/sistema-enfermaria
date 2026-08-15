@@ -86,7 +86,7 @@ async function renderSelecionarEscola() {
     }
 
     // Só mostra a busca quando vale a pena (bastante escola cadastrada).
-    if (escolas.length > 1) {
+    if (escolas.length > 6) {
       campoBusca.style.display = "block";
     }
 
