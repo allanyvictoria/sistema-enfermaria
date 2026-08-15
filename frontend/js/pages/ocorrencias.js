@@ -181,7 +181,7 @@ if (btnFiltrar) {
       ${podeCriar ? `
         <hr style="margin:18px 0;border:none;border-top:1px solid var(--line);" />
         <h4 style="margin:0 0 4px;">Atualizar após o atendimento</h4>
-        <p class="small-muted" style="margin:0 0 12px;">Use aqui pra registrar algo que aconteceu depois, tipo a criança ter piorado ou o responsável ter vindo buscar.</p>
+        <p class="small-muted" style="margin:0 0 12px;">Use aqui pra registrar atualizações pós atendimento.</p>
         <form id="form-atualizar-ocorrencia">
           <div class="field">
             <label for="e-responsavel">Responsável que buscou</label>

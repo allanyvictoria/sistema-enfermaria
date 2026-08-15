@@ -125,13 +125,27 @@ async function renderDashboard() {
 
     // Por sala (barra)
     const porSala = g.por_sala || [];
-    _chartsAtivos.push(new Chart(document.getElementById("chart-por-sala"), {
+    const canvasPorSala = document.getElementById("chart-por-sala");
+    const isMobile = window.innerWidth <= 640;
+
+    if (isMobile) {
+      canvasPorSala.height = Math.max(160, porSala.length * 42);
+    }
+
+    _chartsAtivos.push(new Chart(canvasPorSala, {
       type: "bar",
       data: {
         labels: porSala.map(s => s.sala),
         datasets: [{ label: "Atendimentos", data: porSala.map(s => s.quantidade), backgroundColor: paletaAzuis, borderRadius: 8, maxBarThickness: 46 }]
       },
-      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      options: {
+        indexAxis: isMobile ? "y" : "x",
+        maintainAspectRatio: !isMobile,
+        plugins: { legend: { display: false } },
+        scales: isMobile
+          ? { x: { beginAtZero: true, ticks: { precision: 0 } } }
+          : { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
     }));
 
     // Por turno (pizza)
