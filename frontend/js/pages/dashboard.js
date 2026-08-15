@@ -129,14 +129,14 @@ async function renderDashboard() {
     const isMobile = window.innerWidth <= 640;
 
     if (isMobile) {
-      canvasPorSala.height = Math.max(160, porSala.length * 42);
+      canvasPorSala.height = Math.max(120, porSala.length * 24);
     }
 
     _chartsAtivos.push(new Chart(canvasPorSala, {
       type: "bar",
       data: {
         labels: porSala.map(s => s.sala),
-        datasets: [{ label: "Atendimentos", data: porSala.map(s => s.quantidade), backgroundColor: paletaAzuis, borderRadius: 8, maxBarThickness: 46 }]
+        datasets: [{ label: "Atendimentos", data: porSala.map(s => s.quantidade), backgroundColor: paletaAzuis, borderRadius: 8, maxBarThickness: 32 }]
       },
       options: {
         indexAxis: isMobile ? "y" : "x",
