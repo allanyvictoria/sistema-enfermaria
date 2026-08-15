@@ -18,9 +18,13 @@ async function renderSelecionarEscola() {
             <span>ENFERMARIA ESCOLAR</span>
           </div>
           <h2>Qual é a sua escola?</h2>
-          <p style="margin-bottom:22px;">Selecione a escola para continuar.</p>
+          <p style="margin-bottom:16px;">Selecione a escola para continuar.</p>
 
           <div class="form-error" id="escola-error"></div>
+
+          <div class="field" id="campo-busca-escola" style="display:none;margin-bottom:14px;">
+            <input type="text" id="busca-escola" placeholder="Buscar escola pelo nome..." autocomplete="off" />
+          </div>
 
           <div id="lista-escolas" class="escola-grid">
             <p style="color:var(--ink-faint);grid-column:1/-1;">Carregando escolas...</p>
@@ -32,12 +36,17 @@ async function renderSelecionarEscola() {
 
   const lista = document.getElementById("lista-escolas");
   const erroBox = document.getElementById("escola-error");
+  const campoBusca = document.getElementById("campo-busca-escola");
+  const inputBusca = document.getElementById("busca-escola");
 
-  try {
-    const escolas = await Api.escolas.listar();
+  function selecionar(escola) {
+    EscolaStore.set({ id: escola.id, nome: escola.nome });
+    location.hash = "#/login";
+  }
 
-    if (!escolas || escolas.length === 0) {
-      lista.innerHTML = `<p style="color:var(--ink-faint);grid-column:1/-1;">Nenhuma escola cadastrada no momento. Fale com o suporte.</p>`;
+  function desenharEscolas(escolas) {
+    if (!escolas.length) {
+      lista.innerHTML = `<p style="color:var(--ink-faint);grid-column:1/-1;">Nenhuma escola encontrada com esse nome.</p>`;
       return;
     }
 
@@ -54,7 +63,6 @@ async function renderSelecionarEscola() {
           type="button"
           class="escola-card"
           data-escola-id="${e.id}"
-          data-escola-nome="${escapeHtml(e.nome)}"
         >
           <span class="escola-card-avatar">${iniciais}</span>
           <span class="escola-card-nome">${escapeHtml(e.nome)}</span>
@@ -64,13 +72,32 @@ async function renderSelecionarEscola() {
       .join("");
 
     lista.querySelectorAll("[data-escola-id]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        EscolaStore.set({
-          id: Number(btn.dataset.escolaId),
-          nome: btn.dataset.escolaNome
-        });
-        location.hash = "#/login";
-      });
+      const escola = escolas.find((e) => e.id === Number(btn.dataset.escolaId));
+      btn.addEventListener("click", () => selecionar(escola));
+    });
+  }
+
+  try {
+    const escolas = await Api.escolas.listar();
+
+    if (!escolas || escolas.length === 0) {
+      lista.innerHTML = `<p style="color:var(--ink-faint);grid-column:1/-1;">Nenhuma escola cadastrada no momento. Fale com o suporte.</p>`;
+      return;
+    }
+
+    // Só mostra a busca quando vale a pena (bastante escola cadastrada).
+    if (escolas.length > 6) {
+      campoBusca.style.display = "block";
+    }
+
+    desenharEscolas(escolas);
+
+    inputBusca.addEventListener("input", () => {
+      const termo = inputBusca.value.trim().toLowerCase();
+      const filtradas = termo
+        ? escolas.filter((e) => e.nome.toLowerCase().includes(termo))
+        : escolas;
+      desenharEscolas(filtradas);
     });
   } catch (err) {
     erroBox.textContent = err.message || "Não foi possível carregar as escolas.";
