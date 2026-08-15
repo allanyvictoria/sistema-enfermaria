@@ -137,48 +137,103 @@ if (btnFiltrar) {
   async function abrirDetalheOcorrencia(id) {
     abrirModal({
       titulo: "Detalhes do atendimento",
+      wide: true,
       corpoHtml: loaderHtml("Carregando..."),
       onMount: async (overlay) => {
-        let o;
-        try {
-          o = await Api.ocorrencias.buscar(id);
-        } catch (err) {
-          overlay.querySelector(".modal-body").innerHTML = emptyStateHtml("Erro", err.message);
-          return;
-        }
-        overlay.querySelector(".modal-body").innerHTML = `
-          <div class="field-row">
-            <div class="field"><label>Aluno</label><p style="color:var(--ink);font-weight:700;">${escapeHtml(o.aluno.nome)}</p></div>
-            <div class="field"><label>Data / hora</label><p style="color:var(--ink);font-weight:700;">${formatarDataHora(o.data_hora)}</p></div>
-          </div>
-          <div class="field-row">
-            <div class="field"><label>Tipo de ocorrência</label><p>${escapeHtml(o.tipo_ocorrencia.nome)}</p></div>
-            <div class="field"><label>Turma</label><p>${escapeHtml(o.aluno?.turma?.nome || "-")}</p></div>            
-          </div>
-          <div class="field-row">
-            <div class="field"><label>Professor(a)</label><p>${escapeHtml(o.professora.nome)}</p></div>
-            <div class="field"><label>Profissional</label><p>${escapeHtml(o.profissional.nome)} <span class="small-muted">(${escapeHtml(o.profissional.funcao)})</span></p></div>
-          </div>
-          <div class="field-row">
-          <div class="field"><label>Descrição</label><p>${escapeHtml(o.descricao)}</p></div>
-          <div class="field"><label>Resultado</label><p>${pillResultado(o.resultado)}</p></div>
-          </div class="field-row">
-          <div class="field"><label>Conduta</label><p>${escapeHtml(o.conduta)}</p></div>
-          ${o.observacoes ? `<div class="field"><label>Observações</label><p>${escapeHtml(o.observacoes)}</p></div>` : ""}
-        `;
+        await carregarDetalhe(overlay, id);
       }
     });
+  }
+
+  async function carregarDetalhe(overlay, id) {
+    const body = overlay.querySelector(".modal-body");
+    body.innerHTML = loaderHtml("Carregando...");
+
+    let o;
+    try {
+      o = await Api.ocorrencias.buscar(id);
+    } catch (err) {
+      body.innerHTML = emptyStateHtml("Erro", err.message);
+      return;
+    }
+
+    const responsaveisDoAluno = o.aluno?.responsaveis || [];
+
+    body.innerHTML = `
+      <div class="field-row">
+        <div class="field"><label>Aluno</label><p style="color:var(--ink);font-weight:700;">${escapeHtml(o.aluno.nome)}</p></div>
+        <div class="field"><label>Data / hora</label><p style="color:var(--ink);font-weight:700;">${formatarDataHora(o.data_hora)}</p></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Tipo de ocorrência</label><p>${escapeHtml(o.tipo_ocorrencia.nome)}</p></div>
+        <div class="field"><label>Turma</label><p>${escapeHtml(o.aluno?.turma?.nome || "-")}</p></div>            
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Professor(a)</label><p>${escapeHtml(o.professora.nome)}</p></div>
+        <div class="field"><label>Profissional</label><p>${escapeHtml(o.profissional.nome)} <span class="small-muted">(${escapeHtml(o.profissional.funcao)})</span></p></div>
+      </div>
+      <div class="field-row">
+      <div class="field"><label>Descrição</label><p>${escapeHtml(o.descricao)}</p></div>
+      <div class="field"><label>Resultado</label><p>${pillResultado(o.resultado)}</p></div>
+      </div class="field-row">
+      <div class="field"><label>Conduta</label><p>${escapeHtml(o.conduta)}</p></div>
+
+      ${podeCriar ? `
+        <hr style="margin:18px 0;border:none;border-top:1px solid var(--line);" />
+        <h4 style="margin:0 0 4px;">Atualizar após o atendimento</h4>
+        <p class="small-muted" style="margin:0 0 12px;">Use aqui pra registrar algo que aconteceu depois, tipo a criança ter piorado ou o responsável ter vindo buscar.</p>
+        <form id="form-atualizar-ocorrencia">
+          <div class="field">
+            <label for="e-responsavel">Responsável que buscou</label>
+            <select id="e-responsavel">
+              <option value="">${responsaveisDoAluno.length ? "Nenhum" : "Nenhum responsável cadastrado para este aluno"}</option>
+              ${responsaveisDoAluno.map(r => `<option value="${r.id}" ${o.responsavel_buscou_id === r.id ? "selected" : ""}>${escapeHtml(r.nome)} (${escapeHtml(r.parentesco)})</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label for="e-obs">Observações</label>
+            <textarea id="e-obs" placeholder="Ex.: criança piorou à tarde, mãe veio buscar às 15h...">${o.observacoes ? escapeHtml(o.observacoes) : ""}</textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="submit" class="btn btn-primary" id="btn-salvar-atualizacao">Salvar atualização</button>
+          </div>
+        </form>
+      ` : (o.observacoes ? `<div class="field"><label>Observações</label><p>${escapeHtml(o.observacoes)}</p></div>` : "")}
+    `;
+
+    if (podeCriar) {
+      overlay.querySelector("#form-atualizar-ocorrencia").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = overlay.querySelector("#btn-salvar-atualizacao");
+        btn.disabled = true;
+
+        const respValue = overlay.querySelector("#e-responsavel").value;
+        const dados = {
+          observacoes: overlay.querySelector("#e-obs").value.trim() || null,
+          responsavel_buscou_id: respValue ? Number(respValue) : null
+        };
+
+        try {
+          await Api.ocorrencias.atualizar(id, dados);
+          showToast("Atendimento atualizado com sucesso.", "success");
+          await carregarDetalhe(overlay, id);
+          carregar(); // atualiza a lista em segundo plano, se algo mudou (ex: resultado)
+        } catch (err) {
+          showToast(err.message, "error");
+          btn.disabled = false;
+        }
+      });
+    }
   }
 }
 
 async function abrirFormOcorrencia(alunosPrecarregados, aoSalvar) {
-  let professoras = [], profissionais = [], tipos = [], responsaveis = [];
+  let professoras = [], profissionais = [], tipos = [];
   try {
-    [professoras, profissionais, tipos, responsaveis] = await Promise.all([
+    [professoras, profissionais, tipos] = await Promise.all([
       Api.professoras.listar(),
       Api.profissionais.listar(),
-      Api.tiposOcorrencia.listar(),
-      Api.responsaveis.listar()
+      Api.tiposOcorrencia.listar()
     ]);
   } catch (err) {
     showToast("Não foi possível carregar os dados do formulário: " + err.message, "error");
@@ -186,6 +241,20 @@ async function abrirFormOcorrencia(alunosPrecarregados, aoSalvar) {
   }
 
   const opt = (lista, campoLabel = "nome") => lista.map(i => `<option value="${i.id}">${escapeHtml(i[campoLabel])}</option>`).join("");
+
+  // Monta as opções do "Responsável que buscou" restritas aos adultos
+  // vinculados ao ALUNO selecionado — nunca mostra a lista toda.
+  function optResponsaveisDoAluno(aluno) {
+    if (!aluno || !aluno.responsaveis || !aluno.responsaveis.length) {
+      return `<option value="">Nenhum responsável cadastrado para este aluno</option>`;
+    }
+    return (
+      `<option value="">Nenhum</option>` +
+      aluno.responsaveis
+        .map(r => `<option value="${r.id}">${escapeHtml(r.nome)} (${escapeHtml(r.parentesco)})</option>`)
+        .join("")
+    );
+  }
 
   abrirModal({
     titulo: "Novo atendimento",
@@ -230,7 +299,7 @@ async function abrirFormOcorrencia(alunosPrecarregados, aoSalvar) {
           </div>
           <div class="field">
             <label for="o-responsavel">Responsável que buscou (opcional)</label>
-            <select id="o-responsavel"><option value="">Nenhum</option>${opt(responsaveis)}</select>
+            <select id="o-responsavel" disabled><option value="">Selecione o aluno primeiro</option></select>
           </div>
         </div>
         <div class="field" id="campo-resultado-outro" style="display:none;">
@@ -250,8 +319,10 @@ async function abrirFormOcorrencia(alunosPrecarregados, aoSalvar) {
     onMount: (overlay) => {
       const selAluno = overlay.querySelector("#o-aluno");
       const boxAlerta = overlay.querySelector("#alerta-saude-aluno");
+      const selResponsavel = overlay.querySelector("#o-responsavel");
 
-      // Escutador para alertar sobre alergias/condições instantaneamente ao escolher o aluno
+      // Escutador para alertar sobre alergias/condições E filtrar o
+      // dropdown de "responsável que buscou" assim que o aluno é escolhido
       selAluno.addEventListener("change", (e) => {
         const idAluno = Number(e.target.value);
         const aluno = alunosPrecarregados.find(a => a.id === idAluno);
@@ -267,6 +338,9 @@ async function abrirFormOcorrencia(alunosPrecarregados, aoSalvar) {
         } else {
           boxAlerta.innerHTML = "";
         }
+
+        selResponsavel.innerHTML = optResponsaveisDoAluno(aluno);
+        selResponsavel.disabled = !aluno || !aluno.responsaveis || !aluno.responsaveis.length;
       });
 
       const selResultado = overlay.querySelector("#o-resultado");

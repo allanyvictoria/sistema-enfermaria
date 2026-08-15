@@ -87,7 +87,8 @@ const Api = {
       return apiRequest(`/ocorrencias/${qs ? "?" + qs : ""}`);
     },
     buscar: (id) => apiRequest(`/ocorrencias/${id}`),
-    criar: (dados) => apiRequest("/ocorrencias/", { method: "POST", body: dados })
+    criar: (dados) => apiRequest("/ocorrencias/", { method: "POST", body: dados }),
+    atualizar: (id, dados) => apiRequest(`/ocorrencias/${id}`, { method: "PATCH", body: dados })
   },
   salas: {
     listar: () => apiRequest("/salas/"),

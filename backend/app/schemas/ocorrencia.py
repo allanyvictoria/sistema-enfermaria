@@ -2,6 +2,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional
 from app.schemas.turma import TurmaResponse
+from app.schemas.aluno import ResponsavelResumoSchema
 
 class OcorrenciaCreate(BaseModel):
     aluno_id: int
@@ -17,10 +18,20 @@ class OcorrenciaCreate(BaseModel):
     observacoes: str | None = None
 
 
+class OcorrenciaAtualizacao(BaseModel):
+    # Usado para atualizar uma ocorrência DEPOIS de já registrada —
+    # ex: anotar que a criança piorou, ou marcar quem veio buscar.
+    # Todos os campos são opcionais: só o que for enviado é alterado.
+    observacoes: str | None = None
+    resultado: str | None = None
+    responsavel_buscou_id: int | None = None
+
+
 class AlunoResumo(BaseModel):
     id: int
     nome: str
     turma: Optional[TurmaResponse] = None
+    responsaveis: list[ResponsavelResumoSchema] = []
 
     class Config:
         from_attributes = True

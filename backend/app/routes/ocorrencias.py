@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
@@ -8,8 +8,9 @@ from app.models.aluno import Aluno
 from app.models.professora import Professora
 from app.models.profissional_enfermagem import ProfissionalEnfermagem
 from app.models.tipo_ocorrencia import TipoOcorrencia
+from app.models.responsavel import Responsavel
 from app.models.usuario import Usuario
-from app.schemas.ocorrencia import OcorrenciaCreate, OcorrenciaResponse
+from app.schemas.ocorrencia import OcorrenciaCreate, OcorrenciaAtualizacao, OcorrenciaResponse
 from app.dependencies.auth import (
     get_usuario_atual,
     get_escola_id_atual,
@@ -137,7 +138,7 @@ def buscar_ocorrencia(
         db.query(Ocorrencia)
         .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
         .options(
-            joinedload(Ocorrencia.aluno),
+            joinedload(Ocorrencia.aluno).joinedload(Aluno.responsaveis),
             joinedload(Ocorrencia.professora),
             joinedload(Ocorrencia.profissional),
             joinedload(Ocorrencia.tipo_ocorrencia)
@@ -153,3 +154,57 @@ def buscar_ocorrencia(
         )
 
     return ocorrencia
+
+
+@router.patch(
+    "/{ocorrencia_id}",
+    response_model=OcorrenciaResponse,
+    dependencies=[Depends(admin_ou_enfermagem)]
+)
+def atualizar_ocorrencia(
+    ocorrencia_id: int,
+    dados: OcorrenciaAtualizacao,
+    db: Session = Depends(get_db),
+    escola_id: int = Depends(get_escola_id_atual),
+):
+    # Usado pra complementar uma ocorrência DEPOIS de já salva — ex:
+    # anotar que a criança piorou, ou marcar quem veio buscar mais tarde.
+    ocorrencia = (
+        db.query(Ocorrencia)
+        .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
+        .filter(Ocorrencia.id == ocorrencia_id, Aluno.escola_id == escola_id)
+        .first()
+    )
+
+    if not ocorrencia:
+        raise HTTPException(status_code=404, detail="Ocorrência não encontrada")
+
+    campos = dados.model_dump(exclude_unset=True)
+
+    if "responsavel_buscou_id" in campos and campos["responsavel_buscou_id"] is not None:
+        # Confere que o responsável é da mesma escola e está de fato
+        # vinculado a este aluno — evita marcar um adulto qualquer.
+        vinculado = (
+            db.query(Responsavel)
+            .join(Responsavel.alunos)
+            .filter(
+                Responsavel.id == campos["responsavel_buscou_id"],
+                Responsavel.escola_id == escola_id,
+                Aluno.id == ocorrencia.aluno_id,
+            )
+            .first()
+        )
+        if not vinculado:
+            raise HTTPException(
+                status_code=400,
+                detail="Este responsável não está vinculado a este aluno."
+            )
+
+    for campo, valor in campos.items():
+        setattr(ocorrencia, campo, valor)
+
+    ocorrencia.modificado_em = datetime.now()
+
+    db.commit()
+
+    return buscar_ocorrencia(ocorrencia_id, db, escola_id)
