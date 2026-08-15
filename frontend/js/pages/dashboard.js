@@ -124,29 +124,49 @@ async function renderDashboard() {
     }));
 
     // Por sala (barra)
-    const porSala = g.por_sala || [];
-    const canvasPorSala = document.getElementById("chart-por-sala");
-    const isMobile = window.innerWidth <= 640;
+const porSala = g.por_sala || [];
+const canvasPorSala = document.getElementById("chart-por-sala");
+const isMobile = window.innerWidth <= 640;
 
-    if (isMobile) {
-      canvasPorSala.height = Math.max(120, porSala.length * 24);
-    }
+// Opcional: Se for mobile, defina a altura do CONTAINER PAI, não do canvas diretamente
+if (isMobile && canvasPorSala.parentElement) {
+  // 30px por barra + folga para eixos, com limite máximo de 350px
+  const alturaCalculada = Math.min(350, Math.max(180, porSala.length * 30 + 40));
+  canvasPorSala.parentElement.style.height = `${alturaCalculada}px`;
+  canvasPorSala.parentElement.style.position = "relative";
+}
 
-    _chartsAtivos.push(new Chart(canvasPorSala, {
-      type: "bar",
-      data: {
-        labels: porSala.map(s => s.sala),
-        datasets: [{ label: "Atendimentos", data: porSala.map(s => s.quantidade), backgroundColor: paletaAzuis, borderRadius: 8, maxBarThickness: 32 }]
+_chartsAtivos.push(new Chart(canvasPorSala, {
+  type: "bar",
+  data: {
+    labels: porSala.map(s => s.sala),
+    datasets: [{
+      label: "Atendimentos",
+      data: porSala.map(s => s.quantidade),
+      backgroundColor: paletaAzuis,
+      borderRadius: 6,
+      maxBarThickness: isMobile ? 24 : 40 // Barras mais finas no mobile
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false, // Mantém false para respeitar o container
+    indexAxis: isMobile ? "y" : "x",
+    plugins: {
+      legend: { display: false }
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        ticks: { precision: 0 }
       },
-      options: {
-        indexAxis: isMobile ? "y" : "x",
-        maintainAspectRatio: !isMobile,
-        plugins: { legend: { display: false } },
-        scales: isMobile
-          ? { x: { beginAtZero: true, ticks: { precision: 0 } } }
-          : { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      y: {
+        beginAtZero: true,
+        ticks: { precision: 0 }
       }
-    }));
+    }
+  }
+}));
 
     // Por turno (pizza)
     const porTurno = g.por_turno || [];
