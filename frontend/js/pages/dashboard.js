@@ -51,8 +51,8 @@ async function renderDashboard() {
       <div class="stat-card coral">
         <div class="icon-wrap">${Icon.door}</div>
         <div>
-          <div class="stat-value">${ind.salas_envolvidas ?? 0}</div>
-          <div class="stat-label">Salas envolvidas</div>
+          <div class="stat-value">${ind.turmas_envolvidas ?? 0}</div>
+          <div class="stat-label">Turmas envolvidas</div>
         </div>
       </div>
     </div>

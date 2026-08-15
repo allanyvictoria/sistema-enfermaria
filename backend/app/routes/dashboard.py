@@ -7,6 +7,7 @@ from app.models.professora import Professora
 from app.database import SessionLocal
 from app.models.ocorrencia import Ocorrencia
 from app.models.aluno import Aluno
+from app.models.matricula import Matricula
 from app.models.tipo_ocorrencia import TipoOcorrencia
 from app.dependencies.auth import qualquer_usuario, get_usuario_atual, get_escola_id_atual
 from app.models.usuario import Usuario
@@ -36,7 +37,7 @@ def resumo_dashboard(
     ano_atual = hoje.year
 
     # ----------------------------------------------------
-    # 📌 1. INDICADORES DO MÊS
+    #  1. INDICADORES DO MÊS
     # ----------------------------------------------------
     # Ocorrencia não tem escola_id direto — isolamento vem do aluno,
     # então toda query abaixo faz join com Aluno e filtra por escola_id.
@@ -63,10 +64,15 @@ def resumo_dashboard(
         ).scalar() or 0
     )
 
-    # Total de salas/turmas (professoras) envolvidas no mês
-    salas_envolvidas = (
-        db.query(func.count(func.distinct(Ocorrencia.professora_id)))
+    # Total de turmas distintas envolvidas no mês.
+    turmas_envolvidas = (
+        db.query(func.count(func.distinct(Matricula.turma_id)))
+        .select_from(Ocorrencia)
         .join(Aluno, Ocorrencia.aluno_id == Aluno.id)
+        .join(
+            Matricula,
+            (Matricula.aluno_id == Aluno.id) & (Matricula.data_fim.is_(None))
+        )
         .filter(
             Aluno.escola_id == escola_id,
             extract('month', Ocorrencia.data_hora) == mes_atual,
@@ -75,10 +81,10 @@ def resumo_dashboard(
     )
 
     # ----------------------------------------------------
-    # 📊 2. GRÁFICOS
+    # 2. GRÁFICOS
     # ----------------------------------------------------
     
-    # 📈 A. Ocorrências por Dia no Mês
+    #  A. Ocorrências por Dia no Mês
     por_dia_query = (
         db.query(
             func.date(Ocorrencia.data_hora).label("data"),
@@ -96,7 +102,7 @@ def resumo_dashboard(
     )
     ocorrencias_por_dia = [{"data": str(item.data), "quantidade": item.quantidade} for item in por_dia_query]
 
-    # 🩺 B. Ocorrências por Tipo (Queda, Dor, Ferimento, etc.)
+    #  B. Ocorrências por Tipo (Queda, Dor, Ferimento, etc.)
     por_tipo_query = (
         db.query(
             TipoOcorrencia.nome.label("tipo"),
@@ -115,7 +121,7 @@ def resumo_dashboard(
     )
     ocorrencias_por_tipo = [{"tipo": item.tipo, "quantidade": item.quantidade} for item in por_tipo_query]
 
-   # 🏫 C. Ocorrências por Sala / Turma (Turma do Aluno + Professora)
+   #  C. Ocorrências por Sala / Turma (Turma do Aluno + Professora)
     # Buscamos as ocorrências do mês, já restritas à escola
     ocorrencias_mes = (
         db.query(Ocorrencia)
@@ -154,7 +160,7 @@ def resumo_dashboard(
         }
         for (turma, prof), qtd in sorted(contagem_salas.items(), key=lambda item: item[1], reverse=True)
     ]
-    # ☀️ D. Ocorrências por Turno (Manhã < 12h | Tarde >= 12h)
+    #  D. Ocorrências por Turno (Manhã < 12h | Tarde >= 12h)
     turno_expr = case(
         (extract('hour', Ocorrencia.data_hora) < 12, 'Manhã'),
         else_='Tarde'
@@ -183,7 +189,7 @@ def resumo_dashboard(
         "indicadores": {
             "atendimentos_mes": atendimentos_mes,
             "criancas_atendidas": criancas_atendidas,
-            "salas_envolvidas": salas_envolvidas
+            "turmas_envolvidas": turmas_envolvidas
         },
         "graficos": {
             "por_dia": ocorrencias_por_dia,
