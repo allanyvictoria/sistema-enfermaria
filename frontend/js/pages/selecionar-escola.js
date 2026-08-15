@@ -22,8 +22,8 @@ async function renderSelecionarEscola() {
 
           <div class="form-error" id="escola-error"></div>
 
-          <div id="lista-escolas" style="display:flex;flex-direction:column;gap:10px;">
-            <p style="color:var(--ink-faint);">Carregando escolas...</p>
+          <div id="lista-escolas" class="escola-grid">
+            <p style="color:var(--ink-faint);grid-column:1/-1;">Carregando escolas...</p>
           </div>
         </div>
       </div>
@@ -37,24 +37,30 @@ async function renderSelecionarEscola() {
     const escolas = await Api.escolas.listar();
 
     if (!escolas || escolas.length === 0) {
-      lista.innerHTML = `<p style="color:var(--ink-faint);">Nenhuma escola cadastrada no momento. Fale com o suporte.</p>`;
+      lista.innerHTML = `<p style="color:var(--ink-faint);grid-column:1/-1;">Nenhuma escola cadastrada no momento. Fale com o suporte.</p>`;
       return;
     }
 
     lista.innerHTML = escolas
-      .map(
-        (e) => `
+      .map((e) => {
+        const iniciais = e.nome
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((p) => p[0].toUpperCase())
+          .join("");
+        return `
         <button
           type="button"
-          class="btn btn-outline"
-          style="width:100%;padding:14px;justify-content:flex-start;text-align:left;font-size:15px;"
+          class="escola-card"
           data-escola-id="${e.id}"
-          data-escola-nome="${e.nome}"
+          data-escola-nome="${escapeHtml(e.nome)}"
         >
-          ${e.nome}
+          <span class="escola-card-avatar">${iniciais}</span>
+          <span class="escola-card-nome">${escapeHtml(e.nome)}</span>
         </button>
-      `
-      )
+      `;
+      })
       .join("");
 
     lista.querySelectorAll("[data-escola-id]").forEach((btn) => {
